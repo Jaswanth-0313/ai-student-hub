@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import api, { authAPI } from '../services/api'
-import { useContext } from 'react'
+import api, { authAPI, setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 
 export default function Signup(){
@@ -10,15 +9,28 @@ export default function Signup(){
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const authContext = useContext(AuthContext)
 
   const submit = async (e) => {
     e.preventDefault()
+    setError(null)
     try {
       const res = await authAPI.register({ name, email, password })
-      // after register redirect to login (or auto-login if API returned token)
-      navigate('/login')
+      const { token, user } = res.data
+      
+      // Auto-login after successful signup
+      if (token && user) {
+        setAuthToken(token)
+        authContext.login(token, user)
+        navigate('/dashboard')
+      } else {
+        // Fallback to login page if no token returned
+        navigate('/login')
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed')
+      const errorMsg = err.response?.data?.message || err.message || 'Signup failed'
+      console.error('Signup Error:', errorMsg)
+      setError(errorMsg)
     }
   }
 

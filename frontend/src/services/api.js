@@ -19,13 +19,44 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data || '')
+    return config
+  },
+  (error) => {
+    console.error('❌ Request Error:', error)
+    return Promise.reject(error)
+  }
+)
+
+// Add response interceptor for logging and error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ ${response.status} ${response.config.url}`, response.data)
+    return response
+  },
+  (error) => {
+    console.error('❌ Response Error:', {
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      data: error.response?.data,
+      url: error.config?.url
+    })
+    return Promise.reject(error)
+  }
+)
+
 export function setAuthToken(token) {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
     localStorage.setItem('token', token)
+    console.log('🔐 Auth token set')
   } else {
     delete api.defaults.headers.common['Authorization']
     localStorage.removeItem('token')
+    console.log('🔓 Auth token cleared')
   }
 }
 

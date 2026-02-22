@@ -13,15 +13,23 @@ export default function Login(){
 
   const submit = async (e) => {
     e.preventDefault()
+    setError(null)
     try {
       const res = await authAPI.login({ email, password })
       const { token, user } = res.data
+      
+      if (!token || !user) {
+        throw new Error('Invalid server response - missing token or user')
+      }
+      
       setAuthToken(token)
       // update global auth
       authContext.login(token, user)
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed')
+      const errorMsg = err.response?.data?.message || err.message || 'Login failed'
+      console.error('Login Error:', errorMsg)
+      setError(errorMsg)
     }
   }
 

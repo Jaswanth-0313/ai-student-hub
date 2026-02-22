@@ -4,10 +4,15 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// ✅ CREATE USER
+// ✅ CREATE USER (Signup)
 router.post("/create", async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Validation
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required" });
+    }
 
     // check if email already exists
     const existingUser = await User.findOne({ email });
@@ -27,9 +32,25 @@ router.post("/create", async (req, res) => {
 
     await newUser.save();
 
-    res.status(201).json(newUser);
+    // Auto-login: Generate JWT token immediately after signup
+    const token = jwt.sign(
+      { id: newUser._id },
+      process.env.JWT_SECRET || "secretkey",
+      { expiresIn: "1d" }
+    );
+
+    res.status(201).json({
+      message: "Signup successful",
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+      },
+    });
 
   } catch (err) {
+    console.error("Signup error:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -37,6 +58,11 @@ router.post("/create", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
     // check user
     const user = await User.findOne({ email });
@@ -68,6 +94,7 @@ router.post("/login", async (req, res) => {
     });
 
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ message: err.message });
   }
 });
