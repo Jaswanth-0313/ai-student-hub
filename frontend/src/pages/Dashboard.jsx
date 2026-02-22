@@ -17,9 +17,7 @@ export default function Dashboard(){
     const fetchTools = async () => {
       try {
         setLoading(true)
-        const base = import.meta.env.VITE_API_BASE || '/api'
-        const url = `${base.replace(/\/$/, '')}/tools`
-        const res = await api.get(url)
+        const res = await api.get('/tools')
         const list = Array.isArray(res.data) ? res.data : res.data.tools || []
         setTools(list)
       } catch(err) {
