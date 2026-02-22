@@ -90,8 +90,9 @@ app.use('/api', (req, res) => {
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api')) return next();
-  // If the client accepts HTML, serve the SPA
+  // If the client accepts HTML, serve the SPA with no-cache headers
   if (req.accepts && req.accepts('html')) {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
   next();
