@@ -46,7 +46,10 @@ export default function Dashboard(){
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Welcome, {user?.name || 'Student'}! 👋</h1>
+        <div className="flex items-center gap-4">
+          <img src="/studenthub-logo.png" alt="AI Student Hub" className="h-12 w-12 rounded-lg" onError={(e) => e.target.style.display = 'none'} />
+          <h1 className="text-3xl font-bold">Welcome, {user?.name || 'Student'}! 👋</h1>
+        </div>
         <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Logout</button>
       </div>
 

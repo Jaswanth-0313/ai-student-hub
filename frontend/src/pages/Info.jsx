@@ -10,7 +10,7 @@ export default function Info(){
     const fetch = async () => {
       try{
         const res = await api.get('/tools/details')
-        setTools(res.data)
+        setTools(Array.isArray(res.data) ? res.data : res.data.tools || [])
       }catch(err){
         console.error('Error fetching tool details', err)
         setError(err.response?.data?.message || err.message || 'Failed to load')

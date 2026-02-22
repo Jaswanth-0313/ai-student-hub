@@ -8,8 +8,11 @@ export default function Landing() {
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Student Hub" className="h-8 w-8 rounded" onError={(e) => e.target.style.display = 'none'} />
-            <h1 className="text-2xl font-bold text-indigo-600">AI Student Hub</h1>
+            <img src="/studenthub-logo.png" alt="Student Hub" className="h-10 w-10 rounded" onError={(e) => e.target.style.display = 'none'} />
+            <div>
+              <h1 className="text-2xl font-bold text-indigo-600">AI Student Hub</h1>
+              <p className="text-xs text-gray-600">One Login • One Platform • Unlimited Possibilities</p>
+            </div>
           </div>
           <div className="flex gap-4">
             <Link to="/login" className="px-4 py-2 text-indigo-600 hover:text-indigo-800 font-medium">
@@ -23,10 +26,16 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-4 py-20 text-center">
+      <div className="max-w-6xl mx-auto px-4 py-12 text-center">
+        <div className="mb-8 flex justify-center">
+          <img src="/studenthub-logo.png" alt="AI Student Hub" className="h-20 w-20 rounded-lg shadow-lg" onError={(e) => e.target.style.display = 'none'} />
+        </div>
         <h2 className="text-5xl font-bold text-gray-900 mb-4">
           All AI Tools for Students in One Place
         </h2>
+        <p className="text-2xl font-semibold text-indigo-600 mb-6">
+          One Login • One Platform • Unlimited Possibilities
+        </p>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
           Connect and manage your favorite AI tools—ChatGPT, GitHub, LeetCode, and more. 
           Access all your learning resources from a single unified dashboard.
