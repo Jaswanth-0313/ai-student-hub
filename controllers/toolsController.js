@@ -26,10 +26,25 @@ function decrypt(data) {
 }
 
 // Get all tools merged with connection status for current user
+const jwt = require('jsonwebtoken');
+
 async function getAllTools(req, res) {
   try {
-    const userId = req.userId || (req.user && req.user.id);
-    const connections = await ToolConnection.find({ userId });
+    // Allow optional auth: if Authorization header present, decode token to get userId
+    let userId = req.userId || (req.user && req.user.id);
+    const authHeader = req.headers && req.headers.authorization;
+    if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+        userId = decoded.id;
+      } catch (e) {
+        // ignore token errors — treat as unauthenticated
+        userId = null;
+      }
+    }
+
+    const connections = userId ? await ToolConnection.find({ userId }) : [];
     const connMap = {};
     connections.forEach(c => { connMap[c.toolName] = c; });
 
