@@ -10,9 +10,20 @@ npm install
 npm run dev
 ```
 
-Important:
-- Backend must be running at `http://localhost:5000` (default). You can change `VITE_API_BASE` in `.env` if needed.
-- Auth uses JWT stored in `localStorage` as `token`.
+## Environment Configuration
+
+The frontend automatically uses:
+- **Development** (`npm run dev`): `http://localhost:5000/api` (from `.env.development`)
+- **Production** (`npm run build`): `https://ai-student-hub-cwql.onrender.com/api` (from `.env.production`)
+
+To override locally, create `.env.local`:
+```
+VITE_API_BASE=http://your-custom-api-url/api
+```
+
+## Important Notes
+- Auth uses JWT stored in `localStorage` as `token`
+- Backend must be running at the configured API URL
 
 Files added:
 - `src/main.jsx`, `src/App.jsx`

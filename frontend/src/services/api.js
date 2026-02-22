@@ -1,6 +1,18 @@
 import axios from 'axios'
 
+// Determine API base URL based on environment
+// In development (npm run dev): uses .env.development
+// In production (npm run build): uses .env.production
+// Can be overridden by .env.local or VITE_API_BASE env variable
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'
+const isDevelopment = import.meta.env.DEV
+
+// Log API configuration
+if (isDevelopment) {
+  console.log(`🔧 Development Mode - API: ${API_BASE}`)
+} else {
+  console.log(`🚀 Production Mode - API: ${API_BASE}`)
+}
 
 const api = axios.create({
   baseURL: API_BASE,
