@@ -16,7 +16,7 @@ npm start
 Server will be ready at: `http://localhost:5000`
 
 #### 2. **Open in Browser**
-Navigate to: `http://localhost:5000`
+Navigate to: 'https://ai-student-hub-cwql.onrender.com'
 
 #### 3. **Create Account & Login**
 - Click "Register" 
