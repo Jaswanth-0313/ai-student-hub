@@ -3,14 +3,14 @@ const router = express.Router();
 const toolsController = require('../controllers/toolsController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// All routes require auth
-router.use(authMiddleware);
-
+// Public routes
 router.get('/', toolsController.getAllTools);
-router.get('/status', toolsController.getConnectedTools);
-router.get('/connected', toolsController.getConnectedTools);
 router.get('/details', toolsController.getToolDetails);
-router.post('/connect/:toolName', toolsController.connectTool);
-router.delete('/disconnect/:toolName', toolsController.disconnectTool);
+
+// Protected routes (require auth)
+router.get('/status', authMiddleware, toolsController.getConnectedTools);
+router.get('/connected', authMiddleware, toolsController.getConnectedTools);
+router.post('/connect/:toolName', authMiddleware, toolsController.connectTool);
+router.delete('/disconnect/:toolName', authMiddleware, toolsController.disconnectTool);
 
 module.exports = router;
