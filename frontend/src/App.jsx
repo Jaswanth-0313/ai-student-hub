@@ -10,13 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 
 export default function App() {
-  const location = useLocation()
-  // Show Navbar only on protected/dashboard routes
-  const showNavbar = !['/landing', '/login', '/signup', '/register', '/'].includes(location.pathname)
-
   return (
     <div className="min-h-screen">
-      {showNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/landing" element={<Landing />} />
