@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ai-student-hub
+    env: node
+    plan: free
+    # Build command: install root deps, then build frontend into `public`
+    buildCommand: |
+      npm install
+      cd frontend
+      npm install
+      npm run build
+    startCommand: "npm start"
+    # You should set these environment variables in the Render dashboard (do NOT store secrets in this repo):
+    # MONGO_URI, JWT_SECRET, CORS_ORIGIN
