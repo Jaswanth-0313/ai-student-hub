@@ -1,0 +1,8 @@
+<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" width="200" height="80">
+  <path d="M20 15 Q15 15 15 20 L15 55 Q15 60 20 60 L45 60 Q50 60 50 55 L50 20 Q50 15 45 15 Z" fill="#0F5F6F" stroke="#0F5F6F" stroke-width="2"/>
+  <path d="M50 15 Q55 15 55 20 L55 55 Q55 60 50 60 L25 60 Q20 60 20 55 L20 20 Q20 15 25 15 Z" fill="#1B7F8F" stroke="#1B7F8F" stroke-width="2"/>
+  <rect x="40" y="8" width="20" height="2" fill="#0F5F6F"/>
+  <polygon points="50,10 45,12 55,12" fill="#0F5F6F"/>
+  <text x="70" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0F5F6F">STUDENT</text>
+  <text x="70" y="65" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0F5F6F">HUB</text>
+</svg>

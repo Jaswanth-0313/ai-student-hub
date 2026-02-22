@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext'
 const AVAILABLE_TOOLS = {
   chatgpt: {
     name: 'ChatGPT',
-    logo: '/assets/tools/chatgpt.png',
+    logo: '/assets/tools/chatgpt.svg',
     icon: '🤖',
     category: 'Content Generation',
     description: 'AI-powered content generation and explanations',
@@ -16,7 +16,7 @@ const AVAILABLE_TOOLS = {
   },
   gamma: {
     name: 'Gamma',
-    logo: '/assets/tools/gamma.png',
+    logo: '/assets/tools/gamma.svg',
     icon: '📊',
     category: 'Presentations',
     description: 'Create stunning AI-powered presentations',
@@ -26,7 +26,7 @@ const AVAILABLE_TOOLS = {
   },
   figma: {
     name: 'Figma',
-    logo: '/assets/tools/figma.png',
+    logo: '/assets/tools/figma.svg',
     icon: '🎨',
     category: 'Design',
     description: 'UI/UX design and prototyping',
@@ -36,7 +36,7 @@ const AVAILABLE_TOOLS = {
   },
   lovable: {
     name: 'Lovable',
-    logo: '/assets/tools/lovable.png',
+    logo: '/assets/tools/lovable.svg',
     icon: '💜',
     category: 'Development',
     description: 'AI-powered app development',
@@ -46,7 +46,7 @@ const AVAILABLE_TOOLS = {
   },
   canva: {
     name: 'Canva',
-    logo: '/assets/tools/canva.png',
+    logo: '/assets/tools/canva.svg',
     icon: '🖼️',
     category: 'Design',
     description: 'Graphic design made easy',
@@ -56,7 +56,7 @@ const AVAILABLE_TOOLS = {
   },
   github: {
     name: 'GitHub',
-    logo: '/assets/tools/github.png',
+    logo: '/assets/tools/github.svg',
     icon: '🐙',
     category: 'Development',
     description: 'Code hosting and collaboration',
@@ -66,7 +66,7 @@ const AVAILABLE_TOOLS = {
   },
   leetcode: {
     name: 'LeetCode',
-    logo: '/assets/tools/leetcode.png',
+    logo: '/assets/tools/leetcode.svg',
     icon: '💻',
     category: 'Practice',
     description: 'Coding interview preparation',
@@ -76,13 +76,24 @@ const AVAILABLE_TOOLS = {
   },
   notebooklm: {
     name: 'Notebook LM',
-    logo: '/assets/tools/notebooklm.png',
+    logo: '/assets/tools/notebooklm.svg',
     icon: '📔',
     category: 'Research & Analysis',
     description: 'AI-powered research and note-taking with Google',
     url: 'https://notebooklm.google.com',
     credentialType: 'token',
     credentialLabel: 'Google API Key or OAuth Token'
+  }
+  ,
+  devcpp: {
+    name: 'DevC++',
+    logo: '/assets/tools/devcpp.svg',
+    icon: '💻',
+    category: 'IDE',
+    description: 'Classic C++ IDE for quick practice',
+    url: 'https://orwelldevcpp.blogspot.com/',
+    credentialType: 'none',
+    credentialLabel: 'No credential required'
   }
 }
 

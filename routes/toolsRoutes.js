@@ -8,6 +8,8 @@ router.use(authMiddleware);
 
 router.get('/', toolsController.getAllTools);
 router.get('/status', toolsController.getConnectedTools);
+router.get('/connected', toolsController.getConnectedTools);
+router.get('/details', toolsController.getToolDetails);
 router.post('/connect/:toolName', toolsController.connectTool);
 router.delete('/disconnect/:toolName', toolsController.disconnectTool);
 

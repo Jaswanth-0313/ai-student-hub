@@ -6,6 +6,7 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Tools from './pages/Tools'
 import Resources from './pages/Resources'
+import Info from './pages/Info'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Navbar /><Dashboard /></ProtectedRoute>} />
         <Route path="/tools" element={<ProtectedRoute><Navbar /><Tools /></ProtectedRoute>} />
         <Route path="/resources" element={<ProtectedRoute><Navbar /><Resources /></ProtectedRoute>} />
+        <Route path="/info" element={<ProtectedRoute><Navbar /><Info /></ProtectedRoute>} />
         <Route path="*" element={<div className="p-6">Page not found</div>} />
       </Routes>
     </div>

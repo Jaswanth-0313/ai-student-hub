@@ -113,9 +113,30 @@ async function disconnectTool(req, res) {
   }
 }
 
+// Return detailed tool metadata (features, howTo, use cases) for learning pages
+async function getToolDetails(req, res) {
+  try {
+    const list = toolsList.map(t => ({
+      name: t.name,
+      key: t.key,
+      logo: t.logo,
+      description: t.description,
+      features: t.features || [],
+      useCases: t.useCases || [],
+      howTo: t.howTo || '',
+      website: t.website || ''
+    }));
+    return res.json(list);
+  } catch (err) {
+    console.error('getToolDetails error', err);
+    return res.status(500).json({ message: err.message });
+  }
+}
+
 module.exports = {
   getAllTools,
   connectTool,
   disconnectTool,
-  getConnectedTools
+  getConnectedTools,
+  getToolDetails
 };
