@@ -77,32 +77,70 @@ const AVAILABLE_TOOLS = {
 }
 
 export default function Tools(){
-  const [tools, setTools] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [tools, setTools] = useState(undefined)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [connecting, setConnecting] = useState(null)
   const [showModal, setShowModal] = useState(null)
   const [credentials, setCredentials] = useState({})
   const { token } = useContext(AuthContext)
 
+  // Fetch tools once on mount. Use Vite env for base URL.
   useEffect(() => {
-    if (!token) return
-    loadTools()
-  }, [token])
+    let mounted = true
 
-  const loadTools = async () => {
-    try {
+    const loadTools = async () => {
       setLoading(true)
-      const res = await api.get('/tools')
-      // res.data is an array of tools with connected boolean
-      setTools(res.data)
-    } catch (err) {
-      console.error('Error loading tools:', err)
-      setError(err.response?.data?.message || 'Failed to load tools')
-    } finally {
-      setLoading(false)
+      setError(null)
+      try {
+        const base = import.meta.env.VITE_API_BASE || '/api'
+        const url = `${base.replace(/\/$/, '')}/tools`
+        console.log('🔍 Fetching tools from:', url)
+        
+        const res = await api.get(url)
+        console.log('✅ Tools API response:', res.data)
+
+        // Normalize response shape. Handle: array, {tools: []}, {data: []}, etc.
+        const payload = res.data
+        let list = []
+        if (Array.isArray(payload)) {
+          list = payload
+        } else if (payload && typeof payload === 'object') {
+          if (Array.isArray(payload.tools)) list = payload.tools
+          else if (Array.isArray(payload.data)) list = payload.data
+          else if (Array.isArray(payload.items)) list = payload.items
+          else {
+            // Fallback: find first array in object
+            for (const v of Object.values(payload)) {
+              if (Array.isArray(v)) {
+                list = v
+                break
+              }
+            }
+          }
+        }
+
+        if (mounted) {
+          setTools(list)
+          console.log('📦 Tools state set to:', list)
+        }
+      } catch (err) {
+        console.error('❌ Error loading tools:', err)
+        const message = err?.response?.data?.message || err?.message || 'Failed to load tools'
+        if (mounted) {
+          setError(message)
+          console.error('Error message:', message)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
     }
-  }
+
+    loadTools()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const handleConnect = async (toolName) => {
     try {
@@ -145,9 +183,12 @@ export default function Tools(){
     return <div className="p-6 text-center">⏳ Loading tools...</div>
   }
 
-  // `tools` is an array from backend merged list
+  // Ensure tools is an array. Prevent undefined/null crashes.
+  const toolsArray = Array.isArray(tools) ? tools : []
   const allTools = Object.entries(AVAILABLE_TOOLS)
-  const connectedToolNames = (tools || []).filter(t=>t.connected).map(t=>t.key || t.key)
+  const connectedToolNames = toolsArray
+    .filter(t => t && typeof t === 'object' && t.connected)
+    .map(t => t.key || t.name || '')
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -182,7 +223,11 @@ export default function Tools(){
 
       {/* Tools Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {allTools.map(([toolId, toolInfo]) => {
+        {(!toolsArray || toolsArray.length === 0) && (
+          <div className="p-6 text-center col-span-full text-gray-500">No tools available</div>
+        )}
+
+        {allTools && allTools.length > 0 && allTools.map(([toolId, toolInfo]) => {
           const isConnected = connectedToolNames.includes(toolId)
           return (
             <div
@@ -194,7 +239,10 @@ export default function Tools(){
               }`}
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="text-3xl">{toolInfo.icon}</div>
+                <div className="flex items-center gap-2">
+                  <img src={toolInfo.logo} alt={toolInfo.name} className="w-8 h-8 rounded" onError={(e) => e.target.style.display = 'none'} />
+                  <div className="text-3xl">{toolInfo.icon}</div>
+                </div>
                 <span
                   className={`text-xs font-semibold px-2 py-1 rounded ${
                     isConnected
