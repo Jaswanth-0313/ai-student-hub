@@ -114,8 +114,7 @@ export default function Tools(){
       setLoading(true)
       setError(null)
       try {
-        const base = import.meta.env.VITE_API_BASE || '/api'
-        const url = `${base.replace(/\/$/, '')}/tools`
+        const url = '/tools'
         console.log('🔍 Fetching tools from:', url)
         
         const res = await api.get(url)

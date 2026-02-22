@@ -9,8 +9,7 @@ export default function Info(){
   useEffect(()=>{
     const fetch = async () => {
       try{
-        const base = import.meta.env.VITE_API_BASE || '/api'
-        const res = await api.get(`${base.replace(/\/$/, '')}/tools/details`)
+        const res = await api.get('/tools/details')
         setTools(res.data)
       }catch(err){
         console.error('Error fetching tool details', err)
