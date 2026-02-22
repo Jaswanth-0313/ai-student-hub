@@ -42,7 +42,7 @@ async function getAllTools(req, res) {
       connectedAt: connMap[t.key] ? connMap[t.key].connectedAt : null
     }));
 
-    return res.json(merged);
+    return res.json({ tools: merged });
   } catch (err) {
     console.error('getAllTools error', err);
     return res.status(500).json({ message: err.message });
@@ -55,7 +55,7 @@ async function getConnectedTools(req, res) {
     const userId = req.userId || (req.user && req.user.id);
     const connections = await ToolConnection.find({ userId, connected: true });
     const keys = connections.map(c => c.toolName);
-    return res.json(keys);
+    return res.json({ connected: keys });
   } catch (err) {
     console.error('getConnectedTools error', err);
     return res.status(500).json({ message: err.message });
@@ -126,7 +126,7 @@ async function getToolDetails(req, res) {
       howTo: t.howTo || '',
       website: t.website || ''
     }));
-    return res.json(list);
+    return res.json({ tools: list });
   } catch (err) {
     console.error('getToolDetails error', err);
     return res.status(500).json({ message: err.message });
