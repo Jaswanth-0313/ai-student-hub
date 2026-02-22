@@ -78,17 +78,18 @@ app.use("/api/dashboard", dashboardRoutes);
 // Serve static files AFTER API routes
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🏠 HOME ENDPOINT - Serve index.html for root
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// Serve `index.html` for non-API routes so the SPA can handle client-side routing
+app.get('*', (req, res) => {
+  // If the request is for an API route, return JSON 404
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({
+      message: 'Endpoint not found',
+      availableEndpoints: 'GET /api/docs'
+    });
+  }
 
-// ❌ 404 HANDLER
-app.use((req, res) => {
-  res.status(404).json({
-    message: "Endpoint not found",
-    availableEndpoints: "GET /api/docs"
-  });
+  // Otherwise serve the SPA's index.html (allowing client-side routing)
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
