@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext'
 const AVAILABLE_TOOLS = {
   chatgpt: {
     name: 'ChatGPT',
-    logo: '/logos/chatgpt.png',
+    logo: '/assets/tools/chatgpt.png',
     icon: '🤖',
     category: 'Content Generation',
     description: 'AI-powered content generation and explanations',
@@ -16,7 +16,7 @@ const AVAILABLE_TOOLS = {
   },
   gamma: {
     name: 'Gamma',
-    logo: '/logos/gamma.png',
+    logo: '/assets/tools/gamma.png',
     icon: '📊',
     category: 'Presentations',
     description: 'Create stunning AI-powered presentations',
@@ -26,7 +26,7 @@ const AVAILABLE_TOOLS = {
   },
   figma: {
     name: 'Figma',
-    logo: '/logos/figma.png',
+    logo: '/assets/tools/figma.png',
     icon: '🎨',
     category: 'Design',
     description: 'UI/UX design and prototyping',
@@ -36,7 +36,7 @@ const AVAILABLE_TOOLS = {
   },
   lovable: {
     name: 'Lovable',
-    logo: '/logos/lovable.png',
+    logo: '/assets/tools/lovable.png',
     icon: '💜',
     category: 'Development',
     description: 'AI-powered app development',
@@ -46,7 +46,7 @@ const AVAILABLE_TOOLS = {
   },
   canva: {
     name: 'Canva',
-    logo: '/logos/canva.png',
+    logo: '/assets/tools/canva.png',
     icon: '🖼️',
     category: 'Design',
     description: 'Graphic design made easy',
@@ -56,7 +56,7 @@ const AVAILABLE_TOOLS = {
   },
   github: {
     name: 'GitHub',
-    logo: '/logos/github.png',
+    logo: '/assets/tools/github.png',
     icon: '🐙',
     category: 'Development',
     description: 'Code hosting and collaboration',
@@ -66,13 +66,23 @@ const AVAILABLE_TOOLS = {
   },
   leetcode: {
     name: 'LeetCode',
-    logo: '/logos/leetcode.png',
+    logo: '/assets/tools/leetcode.png',
     icon: '💻',
     category: 'Practice',
     description: 'Coding interview preparation',
     url: 'https://leetcode.com',
     credentialType: 'username',
     credentialLabel: 'LeetCode Username'
+  },
+  notebooklm: {
+    name: 'Notebook LM',
+    logo: '/assets/tools/notebooklm.png',
+    icon: '📔',
+    category: 'Research & Analysis',
+    description: 'AI-powered research and note-taking with Google',
+    url: 'https://notebooklm.google.com',
+    credentialType: 'token',
+    credentialLabel: 'Google API Key or OAuth Token'
   }
 }
 

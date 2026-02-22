@@ -1,27 +1,36 @@
 import React, { useEffect, useState, useContext } from 'react'
-import api, { setAuthToken, dashboardAPI } from '../services/api'
+import { Link } from 'react-router-dom'
+import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 
 export default function Dashboard(){
-  const [dashboard, setDashboard] = useState(null)
+  const [tools, setTools] = useState([])
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const { logout } = useContext(AuthContext)
+  const { logout, user } = useContext(AuthContext)
 
   useEffect(()=>{
     const token = localStorage.getItem('token')
     if (token) setAuthToken(token)
 
-    const fetchDashboard = async () => {
-      try{
-        const res = await dashboardAPI.getDashboard()
-        setDashboard(res.data)
-      }catch(err){
+    const fetchTools = async () => {
+      try {
+        setLoading(true)
+        const base = import.meta.env.VITE_API_BASE || '/api'
+        const url = `${base.replace(/\/$/, '')}/tools`
+        const res = await api.get(url)
+        const list = Array.isArray(res.data) ? res.data : res.data.tools || []
+        setTools(list)
+      } catch(err) {
+        console.error('Error loading tools:', err)
         setError(err.response?.data?.message || 'Failed to load dashboard')
+      } finally {
+        setLoading(false)
       }
     }
 
-    fetchDashboard()
+    fetchTools()
   },[])
 
   const handleLogout = () => {
@@ -29,39 +38,70 @@ export default function Dashboard(){
     window.location.href = '/login'
   }
 
+  const connectedCount = tools.filter(t => t && t.connected).length
+  const totalCount = tools.length
+  const percentage = totalCount > 0 ? Math.round((connectedCount / totalCount) * 100) : 0
+
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>
-  if (!dashboard) return <div className="p-6">Loading...</div>
+  if (loading) return <div className="p-6">Loading...</div>
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Welcome, {dashboard.user.name}</h1>
-        <div>
-          <button onClick={handleLogout} className="px-3 py-1 bg-red-500 text-white rounded">Logout</button>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Welcome, {user?.name || 'Student'}! 👋</h1>
+        <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Logout</button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+          <div className="text-3xl font-bold text-blue-600">{connectedCount}</div>
+          <div className="text-sm text-gray-600 mt-1">Tools Connected</div>
+        </div>
+        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+          <div className="text-3xl font-bold text-green-600">{totalCount}</div>
+          <div className="text-sm text-gray-600 mt-1">Total Available</div>
+        </div>
+        <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
+          <div className="text-3xl font-bold text-purple-600">{percentage}%</div>
+          <div className="text-sm text-gray-600 mt-1">Integration Progress</div>
         </div>
       </div>
 
-      <section className="mt-6">
-        <h3 className="font-semibold">Stats</h3>
-        <ul className="mt-2 space-y-1 text-sm text-gray-700">
-          <li>Total Tools Available: {dashboard.stats.totalToolsAvailable}</li>
-          <li>Connected Tools: {dashboard.stats.connectedTools}</li>
-          <li>Integration Percentage: {dashboard.stats.integrationPercentage}%</li>
-        </ul>
-      </section>
-
-      <section className="mt-6">
-        <h3 className="font-semibold">Available Tools</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-          {dashboard.availableTools.map(t=> (
-            <div key={t.id} className={t.connected? 'tool-card connected' : 'tool-card'}>
-              <div className="text-2xl">{t.icon}</div>
-              <h4 className="mt-2 font-semibold">{t.name}</h4>
-              <p className="text-sm text-gray-600">{t.description}</p>
-              <div className="mt-2"><strong>Connected:</strong> {t.connected? 'Yes' : 'No'}</div>
-            </div>
-          ))}
+      {/* Quick Actions */}
+      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-8">
+        <h3 className="text-xl font-semibold mb-4">Get Started</h3>
+        <div className="flex gap-4">
+          <Link to="/tools" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+            🔗 Connect Tools
+          </Link>
+          <Link to="/resources" className="px-6 py-2 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition">
+            📚 View Resources
+          </Link>
         </div>
+      </div>
+
+      {/* Connected Tools Preview */}
+      <section>
+        <h2 className="text-2xl font-bold mb-4">Connected Tools</h2>
+        {tools.filter(t => t && t.connected).length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tools.filter(t => t && t.connected).map(t => (
+              <div key={t.key} className="bg-green-50 border-2 border-green-500 p-4 rounded-lg">
+                <h4 className="text-lg font-bold text-green-800">{t.name}</h4>
+                <p className="text-sm text-gray-600 mt-1">✅ Connected</p>
+                <p className="text-xs text-gray-500 mt-2">Connected since {t.connectedAt ? new Date(t.connectedAt).toLocaleDateString() : 'Recently'}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 p-8 rounded-lg text-center text-gray-600">
+            <p className="mb-4">No tools connected yet. Start connecting tools to enhance your learning!</p>
+            <Link to="/tools" className="inline-block px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+              Connect Your First Tool
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   )

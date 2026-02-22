@@ -41,5 +41,11 @@ module.exports = [
     key: 'leetcode',
     logo: '/logos/leetcode.png',
     description: 'Coding practice'
+  },
+  {
+    name: 'Notebook LM',
+    key: 'notebooklm',
+    logo: '/logos/notebooklm.png',
+    description: 'AI research and note-taking'
   }
 ];
