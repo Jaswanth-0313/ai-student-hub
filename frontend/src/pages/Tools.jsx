@@ -2,10 +2,11 @@ import React, { useEffect, useState, useContext } from 'react'
 import api from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 
-// Tool definitions with metadata
+// Tool definitions with metadata (keys match server `data/toolsList.js`)
 const AVAILABLE_TOOLS = {
-  chatGPT: {
+  chatgpt: {
     name: 'ChatGPT',
+    logo: '/logos/chatgpt.png',
     icon: '🤖',
     category: 'Content Generation',
     description: 'AI-powered content generation and explanations',
@@ -15,6 +16,7 @@ const AVAILABLE_TOOLS = {
   },
   gamma: {
     name: 'Gamma',
+    logo: '/logos/gamma.png',
     icon: '📊',
     category: 'Presentations',
     description: 'Create stunning AI-powered presentations',
@@ -24,6 +26,7 @@ const AVAILABLE_TOOLS = {
   },
   figma: {
     name: 'Figma',
+    logo: '/logos/figma.png',
     icon: '🎨',
     category: 'Design',
     description: 'UI/UX design and prototyping',
@@ -33,6 +36,7 @@ const AVAILABLE_TOOLS = {
   },
   lovable: {
     name: 'Lovable',
+    logo: '/logos/lovable.png',
     icon: '💜',
     category: 'Development',
     description: 'AI-powered app development',
@@ -42,6 +46,7 @@ const AVAILABLE_TOOLS = {
   },
   canva: {
     name: 'Canva',
+    logo: '/logos/canva.png',
     icon: '🖼️',
     category: 'Design',
     description: 'Graphic design made easy',
@@ -51,6 +56,7 @@ const AVAILABLE_TOOLS = {
   },
   github: {
     name: 'GitHub',
+    logo: '/logos/github.png',
     icon: '🐙',
     category: 'Development',
     description: 'Code hosting and collaboration',
@@ -60,6 +66,7 @@ const AVAILABLE_TOOLS = {
   },
   leetcode: {
     name: 'LeetCode',
+    logo: '/logos/leetcode.png',
     icon: '💻',
     category: 'Practice',
     description: 'Coding interview preparation',
@@ -86,7 +93,8 @@ export default function Tools(){
   const loadTools = async () => {
     try {
       setLoading(true)
-      const res = await api.get('/tools/mytools')
+      const res = await api.get('/tools')
+      // res.data is an array of tools with connected boolean
       setTools(res.data)
     } catch (err) {
       console.error('Error loading tools:', err)
@@ -100,16 +108,7 @@ export default function Tools(){
     try {
       setConnecting(toolName)
       const tool = AVAILABLE_TOOLS[toolName]
-      const payload = {}
-
-      if (tool.credentialType === 'apiKey') {
-        payload.apiKey = credentials[toolName] || ''
-      } else if (tool.credentialType === 'token') {
-        payload.token = credentials[toolName] || ''
-        payload.username = ''
-      } else if (tool.credentialType === 'username') {
-        payload.username = credentials[toolName] || ''
-      }
+      const payload = { credential: credentials[toolName] || '' }
 
       const res = await api.post(`/tools/connect/${toolName}`, payload)
       console.log(`✅ ${toolName} connected:`, res.data)
@@ -129,7 +128,7 @@ export default function Tools(){
   const handleDisconnect = async (toolName) => {
     try {
       setConnecting(toolName)
-      const res = await api.post(`/tools/disconnect/${toolName}`, {})
+      const res = await api.delete(`/tools/disconnect/${toolName}`)
       console.log(`✅ ${toolName} disconnected:`, res.data)
       
       // Refresh tools list
@@ -146,8 +145,9 @@ export default function Tools(){
     return <div className="p-6 text-center">⏳ Loading tools...</div>
   }
 
-  const connectedToolNames = tools?.connectedTools || []
+  // `tools` is an array from backend merged list
   const allTools = Object.entries(AVAILABLE_TOOLS)
+  const connectedToolNames = (tools || []).filter(t=>t.connected).map(t=>t.key || t.key)
 
   return (
     <div className="max-w-6xl mx-auto p-6">

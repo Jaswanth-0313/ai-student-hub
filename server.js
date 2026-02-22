@@ -6,7 +6,7 @@ const cors = require("cors");
 const path = require("path");
 
 const userRoutes = require("./routes/UserRoutes");
-const toolRoutes = require("./routes/ToolRoutes");
+const toolRoutes = require("./routes/toolsRoutes");
 const dashboardRoutes = require("./routes/DashboardRoutes");
 
 const app = express();   // ⭐ CREATE APP FIRST
