@@ -1,17 +1,20 @@
 import axios from 'axios'
 
-// Determine API base URL based on environment
-// In development (npm run dev): uses .env.development
-// In production (npm run build): uses .env.production
-// Can be overridden by .env.local or VITE_API_BASE env variable
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api'
-const isDevelopment = import.meta.env.DEV
+// Determine API base URL
+// Priority:
+// 1. `import.meta.env.VITE_API_BASE` (set at build time)
+// 2. At runtime, use current origin + '/api' (for static builds served from same host)
+// 3. Fallback to localhost for local development
+const buildTimeApi = import.meta.env.VITE_API_BASE
+const runtimeOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : null
+const API_BASE = buildTimeApi || (runtimeOrigin ? `${runtimeOrigin}/api` : 'http://localhost:5000/api')
+const isDevelopment = import.meta.env.DEV || (runtimeOrigin && runtimeOrigin.includes('localhost'))
 
 // Log API configuration
 if (isDevelopment) {
   console.log(`🔧 Development Mode - API: ${API_BASE}`)
 } else {
-  console.log(`🚀 Production Mode - API: ${API_BASE}`)
+  console.log(`🚀 Production/Runtime Mode - API: ${API_BASE}`)
 }
 
 const api = axios.create({
