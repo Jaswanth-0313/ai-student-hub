@@ -12,3 +12,16 @@ body { @apply bg-gray-50 text-gray-900; font-family: Inter, system-ui, Arial, sa
 .error { @apply mt-3 text-sm text-red-600 }
 .tool-card { @apply p-4 border rounded-lg bg-white }
 .tool-card.connected { @apply border-green-400 bg-green-50 }
+.page { @apply p-4 }
+.page h2 { @apply text-2xl font-semibold mb-4 }
+@media (max-width: 640px){
+	.max-w-6xl { @apply px-4 }
+	.auth-box { @apply mt-8 mx-4 }
+	header .max-w-6xl { @apply px-2 }
+}
+
+/* Navbar mobile adjustments */
+@media (max-width: 768px){
+	header { position: relative }
+	header .max-w-6xl { @apply flex-wrap }
+}

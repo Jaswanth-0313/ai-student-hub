@@ -2,7 +2,7 @@ const ToolConnection = require('../models/ToolConnection');
 const toolsList = require('../data/toolsList');
 const crypto = require('crypto');
 
-const secret = process.env.CREDENTIAL_SECRET || process.env.JWT_SECRET || 'default_credentials_secret';
+const secret = process.env.CREDENTIAL_SECRET || process.env.JWT_SECRET;
 const key = crypto.createHash('sha256').update(secret).digest();
 
 function encrypt(text) {
@@ -27,6 +27,10 @@ function decrypt(data) {
 
 // Get all tools merged with connection status for current user
 const jwt = require('jsonwebtoken');
+const { exec } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 async function getAllTools(req, res) {
   try {
@@ -36,8 +40,12 @@ async function getAllTools(req, res) {
     if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
-        userId = decoded.id;
+        if (process.env.JWT_SECRET) {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          userId = decoded.id;
+        } else {
+          userId = null;
+        }
       } catch (e) {
         // ignore token errors — treat as unauthenticated
         userId = null;
@@ -89,9 +97,11 @@ async function connectTool(req, res) {
     if (!tool) return res.status(400).json({ message: 'Invalid tool' });
 
     // For LeetCode only username required
-    const payload = credential || '';
+    const validator = require('validator');
+    const payload = credential ? String(credential) : '';
+    const sanitizedPayload = validator.escape(payload);
 
-    const encrypted = encrypt(String(payload));
+    const encrypted = encrypt(String(sanitizedPayload));
 
     const update = {
       userId,
@@ -155,3 +165,70 @@ module.exports = {
   getConnectedTools,
   getToolDetails
 };
+
+// --- Dev-C++ compile endpoint (basic sandboxed runner) ---
+// Note: This is a simple implementation using local compiler (g++/gcc).
+// For production, run inside containers with strict resource limits.
+async function compileDevCPP(req, res) {
+  try {
+    const userId = req.userId;
+    const { source, filename = 'main.cpp', compileArgs = '' } = req.body;
+    if (!source) return res.status(400).json({ message: 'Source code required' });
+
+    // create temp directory
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'devcpp-'));
+    const filePath = path.join(tmpDir, filename);
+    fs.writeFileSync(filePath, source);
+
+    const exePath = path.join(tmpDir, 'a.out');
+
+    // If configured to use Docker runner, run inside container
+    const useDocker = String(process.env.USE_DOCKER_RUNNER || 'false').toLowerCase() === 'true';
+    const dockerImage = process.env.DOCKER_RUNNER_IMAGE || 'ai-student-hub-devcpp';
+
+    if (useDocker) {
+      // Ensure tmpDir is accessible to Docker; run container to compile and run
+      const dockerCmd = `docker run --rm -v ${tmpDir}:/work ${dockerImage} /work/${path.basename(filePath)} /work/${path.basename(exePath)}`;
+      exec(dockerCmd, { timeout: 20000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+        if (err) {
+          return res.status(200).json({ success: false, output: stdout, error: stderr || err.message });
+        }
+        return res.json({ success: true, output: stdout, error: stderr });
+      });
+      return;
+    }
+
+    // choose compiler for local execution
+    const compiler = filename.endsWith('.c') ? 'gcc' : 'g++';
+    const cmd = `${compiler} ${filePath} -o ${exePath} ${compileArgs}`;
+
+    // compile with timeout
+    exec(cmd, { timeout: 10000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) {
+        // return compile errors
+        cleanup();
+        return res.status(200).json({ success: false, compileStdout: stdout, compileStderr: stderr || err.message });
+      }
+
+      // run the binary with timeout
+      exec(exePath, { timeout: 5000, maxBuffer: 1024 * 1024 }, (runErr, runStdout, runStderr) => {
+        cleanup();
+        if (runErr) {
+          return res.status(200).json({ success: false, runStdout, runStderr: runStderr || runErr.message });
+        }
+        return res.json({ success: true, runStdout, runStderr });
+      });
+    });
+
+    function cleanup(){
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+    }
+  } catch (err) {
+    console.error('compileDevCPP error', err);
+    return res.status(500).json({ message: err.message });
+  }
+}
+
+// Export compile function
+module.exports.compileDevCPP = compileDevCPP;

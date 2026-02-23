@@ -83,4 +83,21 @@ export const toolsAPI = {
   recommend: (payload) => api.post('/tools/recommend', payload)
 }
 
+export const supportAPI = {
+  submit: (payload) => api.post('/support/submit', payload),
+  myTickets: () => api.get('/support/my')
+}
+
+export const profileAPI = {
+  me: () => api.get('/users/me'),
+  changePassword: (payload) => api.post('/users/change-password', payload),
+  forgotPassword: (payload) => api.post('/users/forgot-password', payload),
+  resetPassword: (payload) => api.post('/users/reset-password', payload)
+}
+
+// Dev-C++ compile API helper
+export const devcppAPI = {
+  compile: (payload) => api.post('/tools/devcpp/compile', payload)
+}
+
 export default api

@@ -36,6 +36,9 @@ export default function Login(){
   return (
     <div className="auth-box">
       <h2>Login</h2>
+      <div style={{marginBottom:12}}>
+        <a className="btn-google" href="/api/users/google">Sign in with Google</a>
+      </div>
       <form onSubmit={submit}>
         <label>Email</label>
         <input value={email} onChange={e=>setEmail(e.target.value)} required />

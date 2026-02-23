@@ -9,6 +9,16 @@ export function AuthProvider({ children }){
   const [loading, setLoading] = useState(!!token)
 
   useEffect(()=>{
+    // Check URL for token (OAuth redirect)
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const urlToken = params.get('token')
+      if (urlToken && !token) {
+        localStorage.setItem('token', urlToken)
+        setToken(urlToken)
+      }
+    } catch (e) {}
+
     if (token){
       setAuthToken(token)
       // fetch basic dashboard to get user info
@@ -18,24 +28,27 @@ export function AuthProvider({ children }){
         })
         .catch(()=>{
           setToken(null)
+          localStorage.removeItem('token')
           setAuthToken(null)
         })
         .finally(()=>setLoading(false))
     } else {
       setLoading(false)
     }
-  },[])
+  },[token])
 
   const login = (newToken, userObj) => {
     setToken(newToken)
     setUser(userObj)
     setAuthToken(newToken)
+    localStorage.setItem('token', newToken)
   }
 
   const logout = () => {
     setToken(null)
     setUser(null)
     setAuthToken(null)
+    localStorage.removeItem('token')
   }
 
   return (

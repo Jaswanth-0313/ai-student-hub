@@ -1,9 +1,15 @@
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: String
+  name: { type: String, required: true },
+  email: { type: String, unique: true, required: true, lowercase: true },
+  password: { type: String },
+  provider: { type: String, enum: ['local', 'google'], default: 'local' },
+  googleId: { type: String },
+  resetToken: { type: String },
+  resetExpires: { type: Date },
+  accountStatus: { type: String, enum: ['active','pending','disabled'], default: 'active' },
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model("User", UserSchema);

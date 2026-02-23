@@ -8,16 +8,45 @@ const path = require("path");
 const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
 const dashboardRoutes = require("./routes/DashboardRoutes");
+const supportRoutes = require("./routes/supportRoutes");
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const User = require('./models/User');
+const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const compression = require('compression');
 
 const app = express();   // ⭐ CREATE APP FIRST
 
 app.use(express.json());
+// Security middlewares
+app.use(helmet());
+app.use(compression());
+// Initialize passport for OAuth
+app.use(passport.initialize());
+
+// Basic rate limiter for auth and sensitive endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' }
+});
+
+// Apply to auth routes
+app.use('/api/users/login', authLimiter);
+app.use('/api/users/create', authLimiter);
+app.use('/api/users/forgot-password', authLimiter);
+app.use('/api/tools/devcpp/compile', authLimiter);
 // Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated), otherwise allow all
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [ (process.env.FRONTEND_URL || 'http://localhost:3000') ],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true
 }
+if (!process.env.CORS_ORIGIN) console.warn('CORS_ORIGIN not set; restricting to FRONTEND_URL or localhost by default');
 app.use(cors(corsOptions));
 
 mongoose.connect(process.env.MONGO_URI)
@@ -29,7 +58,7 @@ if (!process.env.MONGO_URI) {
   console.warn('Warning: MONGO_URI is not set. Production will fail to connect to database.');
 }
 if (!process.env.JWT_SECRET) {
-  console.warn('Warning: JWT_SECRET is not set. Using fallback secret in code; set JWT_SECRET for production.');
+  console.error('FATAL: JWT_SECRET is not set. Generate a strong secret and set JWT_SECRET in your .env.');
 }
 
 // 🔗 API ROUTES - Define these BEFORE static files
@@ -74,6 +103,70 @@ app.get("/api/docs", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/tools", toolRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use('/api/support', supportRoutes);
+// Admin routes (stats / management)
+const adminRoutes = require('./routes/adminRoutes');
+app.use('/api/admin', adminRoutes);
+
+// ---- Google OAuth routes (stateless, issues JWT) ----
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 
+      (process.env.BASE_URL ? process.env.BASE_URL + '/api/users/google/callback' : 'http://localhost:5000/api/users/google/callback')
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+      if (!email) return done(new Error('No email from Google'));
+
+      const normalizedEmail = String(email).toLowerCase();
+      // Only allow Gmail addresses
+      if (!normalizedEmail.endsWith('@gmail.com')) {
+        return done(new Error('Google account must be a @gmail.com address'));
+      }
+
+      let user = await User.findOne({ googleId: profile.id });
+      if (!user) {
+        // If a user exists with same email, link accounts
+        user = await User.findOne({ email: normalizedEmail });
+      }
+
+      if (user) {
+        user.provider = 'google';
+        user.googleId = profile.id;
+        user.email = normalizedEmail;
+        await user.save();
+        return done(null, user);
+      }
+
+      const newUser = new User({
+        name: profile.displayName || 'Google User',
+        email: normalizedEmail,
+        provider: 'google',
+        googleId: profile.id
+      });
+      await newUser.save();
+      return done(null, newUser);
+    } catch (err) {
+      done(err);
+    }
+  }));
+
+  app.get('/api/users/google', passport.authenticate('google', { scope: ['profile','email'] }));
+
+  app.get('/api/users/google/callback', passport.authenticate('google', { session: false, failureRedirect: (process.env.FRONTEND_URL || '/') + '?auth=failed' }), (req, res) => {
+    // Issue JWT and redirect to frontend with token
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
+    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const redirectTo = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const url = new URL(redirectTo);
+    url.searchParams.set('token', token);
+    return res.redirect(url.toString());
+  });
+} else {
+  console.warn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env to enable.');
+}
 
 // Serve static files AFTER API routes
 app.use(express.static(path.join(__dirname, "public")));
@@ -104,4 +197,26 @@ app.listen(PORT, () => {
   console.log("🚀 AI Student Hub Server started on port " + PORT);
   console.log("📖 API Documentation: http://localhost:" + PORT + "/api/docs");
   console.log("🌐 Frontend: http://localhost:" + PORT);
+});
+
+// Ensure admin account is present/rotated on startup (if env vars provided)
+const bcrypt = require('bcryptjs');
+const UserModel = require('./models/User');
+const mongooseConn = mongoose.connection;
+
+async function ensureAdmin() {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    if (!adminEmail || !adminPassword) return;
+    const hashed = await bcrypt.hash(adminPassword, 12);
+    await UserModel.findOneAndUpdate({ email: adminEmail.toLowerCase() }, { $set: { name: 'Administrator', email: adminEmail.toLowerCase(), password: hashed, provider: 'local', accountStatus: 'active' } }, { upsert: true });
+    console.log('Admin user ensured/rotated for', adminEmail);
+  } catch (err) {
+    console.error('ensureAdmin error', err);
+  }
+}
+
+mongooseConn.once('open', () => {
+  ensureAdmin();
 });

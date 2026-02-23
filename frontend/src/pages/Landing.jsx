@@ -8,7 +8,7 @@ export default function Landing() {
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/studenthub-logo.png" alt="Student Hub" className="h-10 w-10 rounded" onError={(e) => e.target.style.display = 'none'} />
+            <img src="/studenthub-logo.svg" alt="Student Hub" className="h-10 w-10" onError={(e) => e.target.style.display = 'none'} />
             <div>
               <h1 className="text-2xl font-bold text-indigo-600">AI Student Hub</h1>
               <p className="text-xs text-gray-600">One Login • One Platform • Unlimited Possibilities</p>
@@ -28,7 +28,7 @@ export default function Landing() {
       {/* Hero Section */}
       <div className="max-w-6xl mx-auto px-4 py-12 text-center">
         <div className="mb-8 flex justify-center">
-          <img src="/studenthub-logo.png" alt="AI Student Hub" className="h-20 w-20 rounded-lg shadow-lg" onError={(e) => e.target.style.display = 'none'} />
+          <img src="/studenthub-logo.svg" alt="AI Student Hub" className="h-20 w-20 shadow-lg" onError={(e) => e.target.style.display = 'none'} />
         </div>
         <h2 className="text-5xl font-bold text-gray-900 mb-4">
           All AI Tools for Students in One Place

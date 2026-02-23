@@ -3,9 +3,34 @@ const router = express.Router();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const validator = require('validator');
+const authMiddleware = require('../middleware/authMiddleware');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const { v4: uuidv4 } = require('uuid');
+const { body, validationResult } = require('express-validator');
+
+// Password strength: min 8, 1 upper, 1 lower, 1 number, 1 special
+const passwordRegex = /^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$/;
 
 // ✅ CREATE USER (Signup)
-router.post("/create", async (req, res) => {
+router.post(
+  "/create",
+  [
+    body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+    body('email').isEmail().withMessage('Invalid email').normalizeEmail(),
+    body('password')
+      .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+      .matches(/(?=.*[a-z])/).withMessage('Password must contain a lowercase letter')
+      .matches(/(?=.*[A-Z])/).withMessage('Password must contain an uppercase letter')
+      .matches(/(?=.*\d)/).withMessage('Password must contain a number')
+      .matches(/(?=.*[\W_])/).withMessage('Password must contain a special character')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
   try {
     const { name, email, password } = req.body;
 
@@ -14,8 +39,19 @@ router.post("/create", async (req, res) => {
       return res.status(400).json({ message: "Name, email, and password are required" });
     }
 
+    // Only allow Gmail addresses for local signup
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!validator.isEmail(normalizedEmail) || !normalizedEmail.endsWith('@gmail.com')) {
+      return res.status(400).json({ message: "Invalid email - please use a @gmail.com address" });
+    }
+
+    // Password strength
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ message: "Weak password - must be 8+ chars, include uppercase, lowercase, number and special character" });
+    }
+
     // check if email already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ message: "Email already registered" });
     }
@@ -25,19 +61,17 @@ router.post("/create", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new User({
-      name,
-      email,
-      password: hashedPassword
+      name: String(name).trim(),
+      email: normalizedEmail,
+      password: hashedPassword,
+      provider: 'local'
     });
 
     await newUser.save();
 
     // Auto-login: Generate JWT token immediately after signup
-    const token = jwt.sign(
-      { id: newUser._id },
-      process.env.JWT_SECRET || "secretkey",
-      { expiresIn: "1d" }
-    );
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.status(201).json({
       message: "Signup successful",
@@ -55,7 +89,17 @@ router.post("/create", async (req, res) => {
   }
 });
 // 🔐 LOGIN USER
-router.post("/login", async (req, res) => {
+router.post(
+  "/login",
+  [
+    body('email').isEmail().withMessage('Invalid email').normalizeEmail(),
+    body('password').notEmpty().withMessage('Password is required')
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+    }
   try {
     const { email, password } = req.body;
 
@@ -64,8 +108,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!validator.isEmail(normalizedEmail) || !normalizedEmail.endsWith('@gmail.com')) {
+      return res.status(400).json({ message: "Invalid email - please use a @gmail.com address" });
+    }
+
     // check user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -77,11 +126,8 @@ router.post("/login", async (req, res) => {
     }
 
     // create token (use env JWT_SECRET in production)
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET || "secretkey",
-      { expiresIn: "1d" }
-    );
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.status(200).json({
       message: "Login successful",
@@ -97,6 +143,89 @@ router.post("/login", async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ message: err.message });
   }
+});
+
+// ---------- Authenticated routes ----------
+// Get current user profile
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password -resetToken -resetExpires');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ user });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Change password (requires current password)
+router.post('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Both current and new passwords are required' });
+    if (!passwordRegex.test(newPassword)) return res.status(400).json({ message: 'Weak new password' });
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Current password incorrect' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Forgot password - generate reset token and email (or return token in dev)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) return res.status(200).json({ message: 'If account exists, a reset link will be sent' });
+
+    const token = uuidv4();
+    user.resetToken = token;
+    user.resetExpires = Date.now() + 1000 * 60 * 60; // 1 hour
+    await user.save();
+
+    // Send email if SMTP configured
+    if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      });
+      const resetUrl = (process.env.FRONTEND_URL || 'http://localhost:5173') + `/reset-password?token=${token}`;
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: user.email,
+        subject: 'AI Student Hub - Password reset',
+        text: `Reset your password: ${resetUrl}`
+      });
+      return res.json({ message: 'If account exists, a reset link will be sent' });
+    }
+
+    // If no SMTP, return token in response for development
+    return res.json({ message: 'Reset token generated (dev mode)', token });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Reset password using token
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password required' });
+    if (!passwordRegex.test(newPassword)) return res.status(400).json({ message: 'Weak new password' });
+    const user = await User.findOne({ resetToken: token, resetExpires: { $gt: Date.now() } });
+    if (!user) return res.status(400).json({ message: 'Invalid or expired token' });
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.resetToken = undefined;
+    user.resetExpires = undefined;
+    await user.save();
+    res.json({ message: 'Password reset successful' });
+  } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
 // ✅ GET ALL USERS

@@ -13,4 +13,7 @@ router.get('/connected', authMiddleware, toolsController.getConnectedTools);
 router.post('/connect/:toolName', authMiddleware, toolsController.connectTool);
 router.delete('/disconnect/:toolName', authMiddleware, toolsController.disconnectTool);
 
+// Dev-C++ compile endpoint
+router.post('/devcpp/compile', authMiddleware, toolsController.compileDevCPP);
+
 module.exports = router;

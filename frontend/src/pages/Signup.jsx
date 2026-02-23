@@ -14,6 +14,15 @@ export default function Signup(){
   const submit = async (e) => {
     e.preventDefault()
     setError(null)
+    // client-side validation
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const passwordRegex = /^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$/
+    if (!normalizedEmail.endsWith('@gmail.com')) {
+      return setError('Please use a @gmail.com email for signup')
+    }
+    if (!passwordRegex.test(password)) {
+      return setError('Weak password - must be 8+ chars with upper, lower, number and special char')
+    }
     try {
       const res = await authAPI.register({ name, email, password })
       const { token, user } = res.data
@@ -37,6 +46,9 @@ export default function Signup(){
   return (
     <div className="auth-box">
       <h2>Sign up</h2>
+      <div style={{marginBottom:12}}>
+        <a className="btn-google" href="/api/users/google">Continue with Google</a>
+      </div>
       <form onSubmit={submit}>
         <label>Name</label>
         <input value={name} onChange={e=>setName(e.target.value)} required />

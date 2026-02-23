@@ -47,7 +47,7 @@ export default function Dashboard(){
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <img src="/studenthub-logo.png" alt="AI Student Hub" className="h-12 w-12 rounded-lg" onError={(e) => e.target.style.display = 'none'} />
+          <img src="/studenthub-logo.svg" alt="AI Student Hub" className="h-12 w-12" onError={(e) => e.target.style.display = 'none'} />
           <h1 className="text-3xl font-bold">Welcome, {user?.name || 'Student'}! 👋</h1>
         </div>
         <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Logout</button>
@@ -72,12 +72,15 @@ export default function Dashboard(){
       {/* Quick Actions */}
       <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-8">
         <h3 className="text-xl font-semibold mb-4">Get Started</h3>
-        <div className="flex gap-4">
-          <Link to="/tools" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Link to="/tools" className="px-6 py-4 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-center">
             🔗 Connect Tools
           </Link>
-          <Link to="/resources" className="px-6 py-2 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition">
-            📚 View Resources
+          <Link to="/devcpp" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
+            💻 C/C++ Compiler
+          </Link>
+          <Link to="/profile" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
+            👤 Profile & Settings
           </Link>
         </div>
       </div>

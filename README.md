@@ -398,6 +398,52 @@ npm start
 ✅ Set up MongoDB Atlas  
 ✅ Start using the hub  
 ✅ Connect first tool  
+
+---
+
+## Additional Setup & Security Notes
+
+- Rate limiting is applied to authentication and compile endpoints to mitigate brute-force and abuse.
+- For executing untrusted C/C++ code, use the included Docker-based runner (recommended). See instructions below.
+
+## Optional: Docker-based Dev-C++ Runner
+
+Build the runner image (from repo root):
+```bash
+docker build -t ai-student-hub-devcpp -f docker/devcpp-runner/Dockerfile docker/devcpp-runner
+```
+
+Enable the runner in your `.env`:
+```dotenv
+USE_DOCKER_RUNNER=true
+DOCKER_RUNNER_IMAGE=ai-student-hub-devcpp
+```
+
+Restart the server. The compile endpoint is `POST /api/tools/devcpp/compile` and requires authentication.
+
+## Google OAuth Setup (step-by-step)
+1. Sign in to Google Cloud Console with your Gmail account.
+2. Go to APIs & Services → Credentials → Create Credentials → OAuth client ID → Web application.
+3. Set Authorized redirect URI to `http://localhost:5000/api/users/google/callback` (or your production callback URL).
+4. Copy the Client ID and Client Secret.
+5. Copy `.env.example` to `.env` and set:
+```dotenv
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/users/google/callback
+FRONTEND_URL=http://localhost:5173
+```
+6. Restart the server and visit `/api/users/google` to begin authentication.
+
+## Commit & Push Locally (suggested)
+After reviewing local changes, run:
+```bash
+git checkout -b feature/auth-google-devcpp
+git add .
+git commit -m "Add Gmail-only auth, Google OAuth, profile, support, and Dev-C++ runner"
+git push origin feature/auth-google-devcpp
+```
+
 ✅ Invite friends  
 
 ### Short-term (Month 1)
