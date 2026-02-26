@@ -55,13 +55,20 @@ export default function Dashboard() {
   return (
     <PageContainer>
       {/* Welcome Header */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-white flex items-center gap-3">
-            Welcome back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{user?.name?.split(' ')[0] || 'Student'}</span>
-            <span className="inline-block animate-bounce origin-bottom">👋</span>
-          </h1>
-          <p className="mt-2 text-gray-400">Here's your study hub overview for today.</p>
+      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-1 rounded-xl bg-gradient-to-tr from-primary to-secondary">
+            <div className="bg-background rounded-[10px] p-2">
+              <img src="/logo.jpg" alt="Logo" className="h-10 w-10 object-contain" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold text-white flex items-center gap-3">
+              Welcome back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{user?.name?.split(' ')[0] || 'Student'}</span>
+              <span className="inline-block animate-bounce origin-bottom">👋</span>
+            </h1>
+            <p className="mt-1 text-gray-400">Here's your study hub overview for today.</p>
+          </div>
         </div>
       </div>
 

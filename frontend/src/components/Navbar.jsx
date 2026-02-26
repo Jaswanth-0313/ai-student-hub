@@ -26,7 +26,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <img src="/studenthub-logo.svg" alt="Student Hub" className="h-8 w-8" onError={(e) => e.target.style.display = 'none'} />
+          <img src="/logo.jpg" alt="Student Hub" className="h-10 w-10 object-contain rounded-lg" />
           <Link to="/dashboard" className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent hover:opacity-80 transition-opacity">
             AI Student Hub
           </Link>
