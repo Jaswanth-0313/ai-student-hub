@@ -1,4 +1,9 @@
 import React from 'react'
+import { ExternalLink, Globe, Layout, LifeBuoy, Settings, Sparkles, Zap } from 'lucide-react'
+import { PageContainer } from '../components/ui/PageContainer'
+import { SectionTitle } from '../components/ui/SectionTitle'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 
 const TOOLS = [
   {
@@ -8,7 +13,7 @@ const TOOLS = [
     setupUrl: 'https://platform.openai.com/api-keys',
     category: 'Content Generation',
     description: 'Get explanations, write content, brainstorm ideas',
-    color: 'from-green-400 to-blue-600'
+    gradient: 'from-[#10a37f]/20 to-[#10a37f]/5'
   },
   {
     name: 'Gamma',
@@ -17,7 +22,7 @@ const TOOLS = [
     setupUrl: 'https://gamma.app/integrations',
     category: 'Presentations',
     description: 'Create beautiful AI-powered presentations',
-    color: 'from-purple-400 to-pink-600'
+    gradient: 'from-[#8e44ad]/20 to-[#8e44ad]/5'
   },
   {
     name: 'Figma',
@@ -26,7 +31,7 @@ const TOOLS = [
     setupUrl: 'https://www.figma.com/developers/api',
     category: 'Design',
     description: 'Design mockups, prototypes, user interfaces',
-    color: 'from-blue-400 to-purple-600'
+    gradient: 'from-[#1abc9c]/20 to-[#1abc9c]/5'
   },
   {
     name: 'Lovable',
@@ -35,7 +40,7 @@ const TOOLS = [
     setupUrl: 'https://lovable.dev/settings/api',
     category: 'Development',
     description: 'Build applications with AI assistance',
-    color: 'from-pink-400 to-purple-600'
+    gradient: 'from-[#ff00ff]/20 to-[#ff00ff]/5'
   },
   {
     name: 'Canva',
@@ -44,7 +49,7 @@ const TOOLS = [
     setupUrl: 'https://www.canva.com/integrations',
     category: 'Design',
     description: 'Create graphics, posters, social media posts',
-    color: 'from-blue-400 to-cyan-600'
+    gradient: 'from-[#00c4cc]/20 to-[#00c4cc]/5'
   },
   {
     name: 'GitHub',
@@ -53,7 +58,7 @@ const TOOLS = [
     setupUrl: 'https://github.com/settings/tokens',
     category: 'Development',
     description: 'Store code, collaborate, version control',
-    color: 'from-gray-600 to-gray-900'
+    gradient: 'from-[#ffffff]/10 to-[#ffffff]/5'
   },
   {
     name: 'LeetCode',
@@ -62,84 +67,121 @@ const TOOLS = [
     setupUrl: 'https://leetcode.com/accounts/login',
     category: 'Practice',
     description: 'Practice coding problems for interviews',
-    color: 'from-yellow-400 to-red-600'
+    gradient: 'from-[#ffa116]/20 to-[#ffa116]/5'
   }
 ]
 
 export default function Resources() {
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">🌐 AI Tools & Resources</h1>
-        <p className="text-gray-600">Direct access to all integrated tools and services</p>
-      </div>
+    <PageContainer>
+      <SectionTitle
+        title="AI Tools & Resources"
+        subtitle="Direct access to all integrated services and quick-start guides."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
         {TOOLS.map((tool) => (
-          <div
+          <Card
             key={tool.name}
-            className={`bg-gradient-to-br ${tool.color} p-6 rounded-lg shadow-lg text-white hover:shadow-2xl transition-shadow`}
+            className={`flex flex-col justify-between overflow-hidden group bg-gradient-to-br ${tool.gradient} border-white/5 hover:border-white/20 transition-all duration-300`}
           >
-            <div className="text-4xl mb-2">{tool.icon}</div>
-            <h2 className="text-xl font-bold mb-1">{tool.name}</h2>
-            <p className="text-sm opacity-90 mb-3">{tool.category}</p>
-            <p className="text-sm mb-4">{tool.description}</p>
-
-            <div className="flex gap-2 flex-wrap">
-              <a
-                href={tool.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 px-3 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded text-sm font-semibold transition text-center"
-              >
-                🔗 Visit
-              </a>
-              <a
-                href={tool.setupUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 px-3 py-2 bg-white bg-opacity-10 hover:bg-opacity-20 text-white rounded text-sm font-semibold transition text-center"
-              >
-                ⚙️ Setup
-              </a>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-xl bg-background/50 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                  {tool.icon}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{tool.category}</span>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">{tool.name}</h2>
+              <p className="text-sm text-gray-400 leading-relaxed mb-6">{tool.description}</p>
             </div>
-          </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                className="flex-1 gap-2 text-xs h-9 bg-white/10 border-white/10 text-white hover:bg-white/20"
+                onClick={() => window.open(tool.url, '_blank')}
+              >
+                <Globe size={14} /> Visit
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 gap-2 text-xs h-9 border-white/5 hover:border-white/20"
+                onClick={() => window.open(tool.setupUrl, '_blank')}
+              >
+                <Settings size={14} /> Setup
+              </Button>
+            </div>
+          </Card>
         ))}
       </div>
 
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-bold text-blue-900 mb-3">📚 How to Use</h3>
-          <ol className="text-blue-800 text-sm space-y-2">
-            <li>1. Click "🔗 Visit" to open any tool website</li>
-            <li>2. Or click "⚙️ Setup" to get your API key</li>
-            <li>3. Go to "Tools" page to connect with your app</li>
-            <li>4. Once connected, click "🔗 Open" to use the tool</li>
-          </ol>
-        </div>
-
-        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-          <h3 className="text-lg font-bold text-green-900 mb-3">🎯 Quick Tips</h3>
-          <ul className="text-green-800 text-sm space-y-2">
-            <li>✨ LeetCode only needs your username (free!)</li>
-            <li>🔐 Keep your API keys safe and secret</li>
-            <li>🚀 Connect tools to enhance your learning</li>
-            <li>💡 Use multiple tools for better results</li>
+      {/* Guides & Tips */}
+      <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card className="p-8 border-primary/20 bg-primary/5">
+          <h3 className="text-lg font-bold text-white flex items-center gap-3 mb-6">
+            <Layout size={20} className="text-primary" /> How to Get Started
+          </h3>
+          <ul className="space-y-4">
+            {[
+              'Click "Visit" to explore any tool\'s website.',
+              'Use the "Setup" link to generate your API keys.',
+              'Head to the Tools page to link them to your hub.',
+              'Enjoy a unified workflow from your personal dashboard.'
+            ].map((text, i) => (
+              <li key={i} className="flex gap-4 items-start text-sm text-gray-400">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/20">
+                  {i + 1}
+                </span>
+                <span className="mt-0.5 leading-relaxed">{text}</span>
+              </li>
+            ))}
           </ul>
-        </div>
+        </Card>
+
+        <Card className="p-8 border-secondary/20 bg-secondary/5">
+          <h3 className="text-lg font-bold text-white flex items-center gap-3 mb-6">
+            <Zap size={20} className="text-secondary" /> Pro Learning Tips
+          </h3>
+          <div className="space-y-4">
+            {[
+              { label: 'Consistency', text: 'LeetCode only needs your username to track progress.' },
+              { label: 'Security', text: 'Never share your API keys with anyone.' },
+              { label: 'Efficiency', text: 'Connect tools to automate repetitive tasks.' },
+              { label: 'Synergy', text: 'Use ChatGPT and NotebookLM together for research.' }
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase text-secondary/70 tracking-tighter">{item.label}</span>
+                <p className="text-sm text-gray-400 leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
-      <div className="mt-8 p-6 bg-purple-100 border-2 border-purple-300 rounded-lg">
-        <h3 className="text-lg font-bold text-purple-900 mb-2">📖 Learn More</h3>
-        <p className="text-purple-800 mb-4">
-          See our detailed guides for connecting each tool:
-        </p>
-        <ul className="text-purple-800 text-sm space-y-1">
-          <li>📄 <a href="/docs/tool-connection-guide" className="underline font-semibold">Tool Connection Guide</a> - Step-by-step setup for each tool</li>
-          <li>🔗 <a href="/docs/website-connections" className="underline font-semibold">Website Connections</a> - All URLs and how to access them</li>
-          <li>🐛 <a href="/docs/auth-debugging" className="underline font-semibold">Debugging Guide</a> - Troubleshoot issues</li>
-        </ul>
-      </div>
-    </div>
+      {/* Learn More Banner */}
+      <Card className="mt-8 p-8 bg-indigo-500/10 border-indigo-500/20 text-center relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12 group-hover:scale-[1.7] transition-transform duration-700">
+          <Sparkles size={120} className="text-indigo-400" />
+        </div>
+        <div className="relative z-10">
+          <h3 className="text-xl font-bold text-white mb-3">Master the Platform</h3>
+          <p className="text-gray-400 max-w-xl mx-auto text-sm mb-6">
+            Our documentation center covers everything from initial setup to advanced debugging.
+          </p>
+          <div className="flex justify-center gap-8 flex-wrap">
+            <a href="/docs/guide" className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold flex items-center gap-1.5 transition-colors">
+              Connection Guide <ExternalLink size={14} />
+            </a>
+            <a href="/docs/web" className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold flex items-center gap-1.5 transition-colors">
+              Website Index <ExternalLink size={14} />
+            </a>
+            <a href="/docs/debug" className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold flex items-center gap-1.5 transition-colors text-red-400/80 hover:text-red-400">
+              Debug Auth <LifeBuoy size={14} />
+            </a>
+          </div>
+        </div>
+      </Card>
+    </PageContainer>
   )
 }
