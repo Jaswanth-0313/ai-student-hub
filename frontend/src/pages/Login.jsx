@@ -1,55 +1,143 @@
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
 import api, { setAuthToken, authAPI } from '../services/api'
-import { useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 
-export default function Login(){
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const authContext = useContext(AuthContext)
+  const { login } = useContext(AuthContext)
 
   const submit = async (e) => {
     e.preventDefault()
     setError(null)
+    setLoading(true)
     try {
       const res = await authAPI.login({ email, password })
       const { token, user } = res.data
-      
+
       if (!token || !user) {
-        throw new Error('Invalid server response - missing token or user')
+        throw new Error('Invalid server response')
       }
-      
+
       setAuthToken(token)
-      // update global auth
-      authContext.login(token, user)
+      login(token, user)
       navigate('/dashboard')
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || 'Login failed'
-      console.error('Login Error:', errorMsg)
-      setError(errorMsg)
+      setError(err.response?.data?.message || err.message || 'Login failed')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="auth-box">
-      <h2>Login</h2>
-      <div style={{marginBottom:12}}>
-        <a className="btn-google" href="/api/users/google">Sign in with Google</a>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[128px] pointer-events-none" />
+
+      {/* Logo Section */}
+      <div className="mb-10 text-center animate-slide-up">
+        <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-primary to-secondary mb-4 shadow-lg shadow-primary/20">
+          <div className="bg-background rounded-xl p-3">
+            <img src="/logo.jpg" alt="Student Hub" className="h-12 w-12 object-contain" />
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Welcome Back</h1>
+        <p className="text-gray-400 mt-2">Sign in to your AI Student Hub account</p>
       </div>
-      <form onSubmit={submit}>
-        <label>Email</label>
-        <input value={email} onChange={e=>setEmail(e.target.value)} required />
 
-        <label>Password</label>
-        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+      <Card className="w-full max-w-md p-8 shadow-2xl border-white/10 animate-slide-up delay-100">
+        <form onSubmit={submit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Email Address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <Mail size={16} />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                placeholder="yours@example.com"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+              />
+            </div>
+          </div>
 
-        <button type="submit">Login</button>
-        {error && <div className="error">{error}</div>}
-      </form>
-      <div className="muted">Don't have an account? <Link to="/register">Sign up</Link></div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Password</label>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <Lock size={16} />
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full py-6 text-base gap-2 shadow-lg shadow-primary/20"
+            disabled={loading}
+          >
+            {loading ? 'Authenticating...' : <><LogIn size={18} /> Sign In</>}
+          </Button>
+
+          {error && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+              <AlertCircle size={18} />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          )}
+
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/5"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-surface px-4 text-gray-500 font-bold">Or continue with</span>
+            </div>
+          </div>
+
+          <a
+            href="/api/users/google"
+            className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
+          >
+            <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
+            Sign in with Google
+          </a>
+        </form>
+      </Card>
+
+      <div className="mt-8 text-center animate-slide-up delay-200">
+        <p className="text-gray-400 text-sm">
+          Don't have an account? {' '}
+          <Link to="/signup" className="text-primary font-bold hover:underline">Create one for free</Link>
+        </p>
+      </div>
+
+      <footer className="mt-16 text-xs text-gray-600 flex items-center gap-4">
+        <span>&copy; 2026 AI Student Hub</span>
+        <span className="h-1 w-1 bg-gray-800 rounded-full" />
+        <Link to="/" className="hover:text-gray-400 transition-colors">Go Back Home</Link>
+      </footer>
     </div>
   )
 }

@@ -1,68 +1,178 @@
 import React, { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { UserPlus, Mail, Lock, User, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import api, { authAPI, setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 
-export default function Signup(){
+export default function Signup() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const authContext = useContext(AuthContext)
+  const { login } = useContext(AuthContext)
 
   const submit = async (e) => {
     e.preventDefault()
     setError(null)
+    setLoading(true)
+
     // client-side validation
     const normalizedEmail = String(email).trim().toLowerCase()
     const passwordRegex = /^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$/
+
     if (!normalizedEmail.endsWith('@gmail.com')) {
+      setLoading(false)
       return setError('Please use a @gmail.com email for signup')
     }
     if (!passwordRegex.test(password)) {
+      setLoading(false)
       return setError('Weak password - must be 8+ chars with upper, lower, number and special char')
     }
+
     try {
       const res = await authAPI.register({ name, email, password })
       const { token, user } = res.data
-      
-      // Auto-login after successful signup
+
       if (token && user) {
         setAuthToken(token)
-        authContext.login(token, user)
+        login(token, user)
         navigate('/dashboard')
       } else {
-        // Fallback to login page if no token returned
         navigate('/login')
       }
     } catch (err) {
-      const errorMsg = err.response?.data?.message || err.message || 'Signup failed'
-      console.error('Signup Error:', errorMsg)
-      setError(errorMsg)
+      setError(err.response?.data?.message || err.message || 'Signup failed')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="auth-box">
-      <h2>Sign up</h2>
-      <div style={{marginBottom:12}}>
-        <a className="btn-google" href="/api/users/google">Continue with Google</a>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[128px] pointer-events-none" />
+
+      {/* Header Section */}
+      <div className="mb-10 text-center animate-slide-up">
+        <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-primary to-secondary mb-4 shadow-lg shadow-primary/20">
+          <div className="bg-background rounded-xl p-3">
+            <img src="/logo.jpg" alt="Student Hub" className="h-12 w-12 object-contain" />
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Create Account</h1>
+        <p className="text-gray-400 mt-2">Join the AI Student Hub community today</p>
       </div>
-      <form onSubmit={submit}>
-        <label>Name</label>
-        <input value={name} onChange={e=>setName(e.target.value)} required />
 
-        <label>Email</label>
-        <input value={email} onChange={e=>setEmail(e.target.value)} required />
+      <Card className="w-full max-w-md p-8 shadow-2xl border-white/10 animate-slide-up delay-100 relative">
+        <div className="absolute top-4 right-4 text-primary opacity-20">
+          <ShieldCheck size={48} />
+        </div>
 
-        <label>Password</label>
-        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+        <form onSubmit={submit} className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Full Name</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <User size={16} />
+              </div>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+                placeholder="John Doe"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+              />
+            </div>
+          </div>
 
-        <button type="submit">Create account</button>
-        {error && <div className="error">{error}</div>}
-      </form>
-      <div className="muted">Already have an account? <Link to="/login">Login</Link></div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Gmail Address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <Mail size={16} />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                placeholder="yours@gmail.com"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Secure Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <Lock size={16} />
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                placeholder="8+ chars, upper, symbol"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm font-mono"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full py-6 text-base gap-2 shadow-lg shadow-primary/20"
+            disabled={loading}
+          >
+            {loading ? 'Creating Profile...' : <><UserPlus size={18} /> Create Account</>}
+          </Button>
+
+          {error && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+              <AlertCircle size={18} />
+              <span className="text-sm font-medium leading-relaxed">{error}</span>
+            </div>
+          )}
+
+          <div className="relative py-3">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/5"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-surface px-4 text-gray-500 font-bold">Or</span>
+            </div>
+          </div>
+
+          <a
+            href="/api/users/google"
+            className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
+          >
+            <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
+            Continue with Google
+          </a>
+        </form>
+      </Card>
+
+      <div className="mt-8 text-center animate-slide-up delay-200">
+        <p className="text-gray-400 text-sm">
+          Already have an account? {' '}
+          <Link to="/login" className="text-secondary font-bold hover:underline">Sign in instead</Link>
+        </p>
+      </div>
+
+      <footer className="mt-16 text-xs text-gray-600 flex items-center gap-4">
+        <span>Student Privacy First</span>
+        <span className="h-1 w-1 bg-gray-800 rounded-full" />
+        <span>Secured by JWT</span>
+        <span className="h-1 w-1 bg-gray-800 rounded-full" />
+        <Link to="/" className="hover:text-gray-400 transition-colors">Go Back Home</Link>
+      </footer>
     </div>
   )
 }

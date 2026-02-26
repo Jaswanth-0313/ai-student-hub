@@ -91,6 +91,7 @@ export const supportAPI = {
 export const profileAPI = {
   me: () => api.get('/users/me'),
   changePassword: (payload) => api.put('/users/change-password', payload),
+  updateProfile: (payload) => api.put('/users/update-profile', payload)
 }
 
 // Dev-C++ compile API helper
