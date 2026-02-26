@@ -1,27 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-gray-50 text-gray-900; font-family: Inter, system-ui, Arial, sans-serif; }
-.auth-box { @apply max-w-md mx-auto mt-16 p-6 bg-white border rounded-lg shadow }
-.auth-box h2 { @apply text-2xl font-semibold }
-.auth-box label { @apply block mt-3 text-sm }
-.auth-box input { @apply w-full p-2 mt-2 border rounded }
-.auth-box button { @apply mt-4 px-4 py-2 bg-indigo-600 text-white rounded }
-.muted { @apply mt-3 text-sm text-gray-600 }
-.error { @apply mt-3 text-sm text-red-600 }
-.tool-card { @apply p-4 border rounded-lg bg-white }
-.tool-card.connected { @apply border-green-400 bg-green-50 }
-.page { @apply p-4 }
-.page h2 { @apply text-2xl font-semibold mb-4 }
-@media (max-width: 640px){
-	.max-w-6xl { @apply px-4 }
-	.auth-box { @apply mt-8 mx-4 }
-	header .max-w-6xl { @apply px-2 }
+@layer base {
+  body {
+    @apply bg-background text-text font-sans antialiased selection:bg-primary/30;
+  }
 }
 
-/* Navbar mobile adjustments */
-@media (max-width: 768px){
-	header { position: relative }
-	header .max-w-6xl { @apply flex-wrap }
+@layer utilities {
+  .glass {
+    @apply bg-surface/60 backdrop-blur-md border border-white/10 shadow-lg;
+  }
+  
+  .glass-card {
+    @apply glass rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:border-white/20 hover:-translate-y-1;
+  }
+}
+
+/* Custom Webkit Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface rounded-full border border-white/5;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
 }

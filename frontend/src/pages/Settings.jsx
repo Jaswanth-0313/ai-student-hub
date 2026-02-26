@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useContext } from 'react'
+import { CheckCircle2, AlertCircle, KeyRound, User as UserIcon, Mail } from 'lucide-react'
 import { profileAPI } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
+import { PageContainer } from '../components/ui/PageContainer'
+import { SectionTitle } from '../components/ui/SectionTitle'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
 
 export default function Settings() {
     const { user, token } = useContext(AuthContext)
@@ -9,6 +15,7 @@ export default function Settings() {
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [msg, setMsg] = useState(null)
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
         if (!profile && token) {
@@ -16,7 +23,7 @@ export default function Settings() {
                 .then(r => setProfile(r.data.user))
                 .catch(() => { })
         }
-    }, [token])
+    }, [token, profile])
 
     const changePassword = async (e) => {
         e.preventDefault()
@@ -29,6 +36,7 @@ export default function Settings() {
             return setMsg({ success: false, text: 'New password and confirm password do not match.' })
         }
 
+        setLoading(true)
         try {
             const res = await profileAPI.changePassword({ currentPassword, newPassword })
             setMsg({ success: true, text: res.data.message })
@@ -37,84 +45,113 @@ export default function Settings() {
             setConfirmPassword('')
         } catch (err) {
             setMsg({ success: false, text: err.response?.data?.message || err.message })
+        } finally {
+            setLoading(false)
         }
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 mt-8 bg-white border rounded shadow-sm">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Settings</h2>
+        <PageContainer>
+            <SectionTitle title="Settings & Profile" subtitle="Manage your account preferences and security." />
 
-            {/* Profile Section (Read Only) */}
-            <div className="mb-10">
-                <h3 className="text-xl font-semibold text-gray-700 mb-4">Profile Information</h3>
-                {profile ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded border">
-                        <div>
-                            <label className="block text-sm text-gray-500 mb-1">Name</label>
-                            <div className="font-medium text-gray-800">{profile.name}</div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                {/* Left Column: Profile Card */}
+                <div className="space-y-8">
+                    <Card className="flex flex-col items-center text-center">
+                        <div className="relative mb-6">
+                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white shadow-lg">
+                                <UserIcon size={40} />
+                            </div>
+                            <div className="absolute bottom-0 right-0 rounded-full bg-surface p-1">
+                                <div className="h-4 w-4 rounded-full bg-green-500 border-2 border-surface animate-pulse" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm text-gray-500 mb-1">Email</label>
-                            <div className="font-medium text-gray-800">{profile.email}</div>
+
+                        <h3 className="text-2xl font-bold tracking-tight text-white mb-1">
+                            {profile?.name || 'Loading...'}
+                        </h3>
+                        <p className="text-gray-400 flex items-center justify-center gap-2">
+                            <Mail size={16} />
+                            {profile?.email || '...'}
+                        </p>
+
+                        <div className="mt-8 w-full border-t border-white/10 pt-6">
+                            <div className="flex justify-between items-center px-4">
+                                <span className="text-sm font-medium text-gray-400">Account Status</span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-400">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                                    {(profile?.accountStatus || 'Active').toUpperCase()}
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm text-gray-500 mb-1">Account Status</label>
-                            <div className="font-medium text-gray-800 capitalize">{profile.accountStatus || 'Active'}</div>
+                    </Card>
+                </div>
+
+                {/* Right Column: Security/Password Card */}
+                <div className="space-y-8">
+                    <Card>
+                        <div className="mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
+                            <div className="rounded-lg bg-primary/20 p-2 text-primary">
+                                <KeyRound size={20} />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Change Password</h3>
                         </div>
-                    </div>
-                ) : (
-                    <div className="text-gray-500">Loading profile...</div>
-                )}
+
+                        <form onSubmit={changePassword} className="space-y-5">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Current Password</label>
+                                <Input
+                                    type="password"
+                                    value={currentPassword}
+                                    onChange={e => setCurrentPassword(e.target.value)}
+                                    required
+                                    placeholder="Enter current password"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">New Password</label>
+                                <Input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    required
+                                    minLength="8"
+                                    placeholder="Minimum 8 characters"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-300">Confirm New Password</label>
+                                <Input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    required
+                                    minLength="8"
+                                    placeholder="Must match new password"
+                                />
+                            </div>
+
+                            {msg && (
+                                <div className={`flex items-start gap-3 rounded-xl p-4 text-sm animate-fade-in ${msg.success ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                    }`}>
+                                    {msg.success ? <CheckCircle2 size={20} className="shrink-0" /> : <AlertCircle size={20} className="shrink-0" />}
+                                    <p>{msg.text}</p>
+                                </div>
+                            )}
+
+                            <Button
+                                type="submit"
+                                className="w-full mt-2"
+                                disabled={loading}
+                            >
+                                {loading ? 'Updating Security...' : 'Update Password'}
+                            </Button>
+                        </form>
+                    </Card>
+                </div>
             </div>
-
-            {/* Change Password Section */}
-            <div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-4">Change Password</h3>
-                <form onSubmit={changePassword} className="bg-gray-50 p-4 rounded border">
-                    <div className="mb-4">
-                        <label className="block text-sm text-gray-600 mb-1">Current Password</label>
-                        <input
-                            type="password"
-                            value={currentPassword}
-                            onChange={e => setCurrentPassword(e.target.value)}
-                            required
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-                    </div>
-                    <div className="mb-4">
-                        <label className="block text-sm text-gray-600 mb-1">New Password</label>
-                        <input
-                            type="password"
-                            value={newPassword}
-                            onChange={e => setNewPassword(e.target.value)}
-                            required
-                            minLength="8"
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long.</p>
-                    </div>
-                    <div className="mb-4">
-                        <label className="block text-sm text-gray-600 mb-1">Confirm New Password</label>
-                        <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
-                            required
-                            minLength="8"
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-500 outline-none"
-                        />
-                    </div>
-                    <button type="submit" className="px-4 py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700 transition">
-                        Update Password
-                    </button>
-                </form>
-
-                {msg && (
-                    <div className={`mt-4 p-3 rounded text-sm ${msg.success ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
-                        {msg.text}
-                    </div>
-                )}
-            </div>
-        </div>
+        </PageContainer>
     )
 }

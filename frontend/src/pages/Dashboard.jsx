@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useContext } from 'react'
 import { Link } from 'react-router-dom'
+import { Activity, Blocks, Code, Link as LinkIcon, Settings, Sparkles, TrendingUp } from 'lucide-react'
 import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
+import { PageContainer } from '../components/ui/PageContainer'
+import { SectionTitle } from '../components/ui/SectionTitle'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 
 export default function Dashboard() {
   const [tools, setTools] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  const { logout, user } = useContext(AuthContext)
+  const { user } = useContext(AuthContext)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -27,86 +31,193 @@ export default function Dashboard() {
         setLoading(false)
       }
     }
-
     fetchTools()
   }, [])
-
-  const handleLogout = () => {
-    logout()
-    window.location.href = '/login'
-  }
 
   const connectedCount = tools.filter(t => t && t.connected).length
   const totalCount = tools.length
   const percentage = totalCount > 0 ? Math.round((connectedCount / totalCount) * 100) : 0
 
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>
-  if (loading) return <div className="p-6">Loading...</div>
+  if (error) return (
+    <PageContainer>
+      <Card className="border-red-500/50 bg-red-500/10"><p className="text-red-400">{error}</p></Card>
+    </PageContainer>
+  )
+
+  if (loading) return (
+    <PageContainer>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    </PageContainer>
+  )
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <img src="/studenthub-logo.svg" alt="AI Student Hub" className="h-12 w-12" onError={(e) => e.target.style.display = 'none'} />
-          <h1 className="text-3xl font-bold">Welcome, {user?.name || 'Student'}! 👋</h1>
+    <PageContainer>
+      {/* Welcome Header */}
+      <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-white flex items-center gap-3">
+            Welcome back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{user?.name?.split(' ')[0] || 'Student'}</span>
+            <span className="inline-block animate-bounce origin-bottom">👋</span>
+          </h1>
+          <p className="mt-2 text-gray-400">Here's your study hub overview for today.</p>
         </div>
-        <button onClick={handleLogout} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Logout</button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-          <div className="text-3xl font-bold text-blue-600">{connectedCount}</div>
-          <div className="text-sm text-gray-600 mt-1">Tools Connected</div>
-        </div>
-        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-          <div className="text-3xl font-bold text-green-600">{totalCount}</div>
-          <div className="text-sm text-gray-600 mt-1">Total Available</div>
-        </div>
-        <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-          <div className="text-3xl font-bold text-purple-600">{percentage}%</div>
-          <div className="text-sm text-gray-600 mt-1">Integration Progress</div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <Card className="relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <LinkIcon size={64} className="text-primary" />
+          </div>
+          <div className="relative z-10">
+            <p className="text-sm font-medium text-gray-400">Tools Connected</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white">{connectedCount}</span>
+              <span className="text-sm text-green-400 flex items-center"><TrendingUp size={14} className="mr-1" /> Active</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Blocks size={64} className="text-secondary" />
+          </div>
+          <div className="relative z-10">
+            <p className="text-sm font-medium text-gray-400">Total Integrations</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white">{totalCount}</span>
+              <span className="text-sm text-gray-400">Available</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="relative overflow-hidden group flex flex-col justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-400">Ecosystem Progress</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-white">{percentage}%</span>
+            </div>
+          </div>
+          <div className="mt-4 h-2 w-full bg-surface rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+        </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-8">
-        <h3 className="text-xl font-semibold mb-4">Get Started</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link to="/tools" className="px-6 py-4 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition text-center">
-            🔗 Connect Tools
-          </Link>
-          <Link to="/devcpp" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
-            💻 C/C++ Compiler
-          </Link>
-          <Link to="/settings" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
-            ⚙️ Settings
-          </Link>
-        </div>
-      </div>
+      {/* Main Grid Floor */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-      {/* Connected Tools Preview */}
-      <section>
-        <h2 className="text-2xl font-bold mb-4">Connected Tools</h2>
-        {tools.filter(t => t && t.connected).length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tools.filter(t => t && t.connected).map(t => (
-              <div key={t.key} className="bg-green-50 border-2 border-green-500 p-4 rounded-lg">
-                <h4 className="text-lg font-bold text-green-800">{t.name}</h4>
-                <p className="text-sm text-gray-600 mt-1">✅ Connected</p>
-                <p className="text-xs text-gray-500 mt-2">Connected since {t.connectedAt ? new Date(t.connectedAt).toLocaleDateString() : 'Recently'}</p>
+        {/* Left Column: Quick Actions & Connected Tools (Spans 2 cols on lg) */}
+        <div className="lg:col-span-2 space-y-8">
+          <section>
+            <SectionTitle title="Quick Actions" subtitle="Jump right back into your workflow" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link to="/tools" className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-2xl">
+                <Card className="h-full hover:bg-white/[0.02] border-primary/30 hover:border-primary/60 flex items-center p-5 gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <Blocks size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Connect Tools</h3>
+                    <p className="text-sm text-gray-400 mt-1">Discover new integrations</p>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link to="/devcpp" className="block focus:outline-none focus:ring-2 focus:ring-secondary rounded-2xl">
+                <Card className="h-full hover:bg-white/[0.02] border-secondary/30 hover:border-secondary/60 flex items-center p-5 gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary">
+                    <Code size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Code Compiler</h3>
+                    <p className="text-sm text-gray-400 mt-1">Open Dev-C++ Workspace</p>
+                  </div>
+                </Card>
+              </Link>
+            </div>
+          </section>
+
+          <section>
+            <SectionTitle title="Your Integrations" />
+            {tools.filter(t => t && t.connected).length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {tools.filter(t => t && t.connected).map(t => (
+                  <Card key={t.key} className="flex flex-col justify-between">
+                    <div className="flex items-start justify-between">
+                      <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        {t.name}
+                      </h4>
+                      <div className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-md font-medium">
+                        Active
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">
+                      Connected since {t.connectedAt ? new Date(t.connectedAt).toLocaleDateString() : 'Recently'}
+                    </p>
+                  </Card>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 p-8 rounded-lg text-center text-gray-600">
-            <p className="mb-4">No tools connected yet. Start connecting tools to enhance your learning!</p>
-            <Link to="/tools" className="inline-block px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
-              Connect Your First Tool
-            </Link>
-          </div>
-        )}
-      </section>
-    </div>
+            ) : (
+              <Card className="flex flex-col items-center justify-center py-12 text-center border-dashed border-white/20">
+                <div className="h-16 w-16 mb-4 rounded-full bg-white/5 flex items-center justify-center text-gray-400">
+                  <Blocks size={32} />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">No tools connected yet</h3>
+                <p className="text-gray-400 mb-6 max-w-sm">
+                  Supercharge your learning experience by integrating AI tools into your hub.
+                </p>
+                <Link to="/tools">
+                  <Button variant="primary">Connect First Tool</Button>
+                </Link>
+              </Card>
+            )}
+          </section>
+        </div>
+
+        {/* Right Column: Recent Activity Stack */}
+        <div className="space-y-8">
+          <section>
+            <SectionTitle title="System Status" />
+            <Card className="p-0 overflow-hidden">
+              <div className="p-5 border-b border-white/10 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">All Systems Operational</p>
+                  <p className="text-xs text-green-400">Latency: 24ms</p>
+                </div>
+              </div>
+              <div className="p-5 border-b border-white/10 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-gray-500/20 flex items-center justify-center text-gray-400">
+                  <Settings size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Profile Configured</p>
+                  <Link to="/settings" className="text-xs text-primary hover:underline">Review Settings</Link>
+                </div>
+              </div>
+              <div className="p-5 flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-gray-500/20 flex items-center justify-center text-gray-400">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">Last Login</p>
+                  <p className="text-xs text-gray-500">Just now from Current Device</p>
+                </div>
+              </div>
+            </Card>
+          </section>
+        </div>
+
+      </div>
+    </PageContainer>
   )
 }
