@@ -10,6 +10,7 @@ import Info from './pages/Info'
 import DevCPP from './pages/DevCPP'
 import Support from './pages/Support'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/info" element={<ProtectedRoute><Navbar /><Info /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute><Navbar /><Support /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Navbar /><Profile /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Navbar /><Settings /></ProtectedRoute>} />
         <Route path="/devcpp" element={<ProtectedRoute><Navbar /><DevCPP /></ProtectedRoute>} />
         <Route path="*" element={<div className="p-6">Page not found</div>} />
       </Routes>

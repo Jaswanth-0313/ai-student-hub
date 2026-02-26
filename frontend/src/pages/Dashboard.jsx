@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 
-export default function Dashboard(){
+export default function Dashboard() {
   const [tools, setTools] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const { logout, user } = useContext(AuthContext)
 
-  useEffect(()=>{
+  useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) setAuthToken(token)
 
@@ -20,7 +20,7 @@ export default function Dashboard(){
         const res = await api.get('/tools')
         const list = Array.isArray(res.data) ? res.data : res.data.tools || []
         setTools(list)
-      } catch(err) {
+      } catch (err) {
         console.error('Error loading tools:', err)
         setError(err.response?.data?.message || 'Failed to load dashboard')
       } finally {
@@ -29,7 +29,7 @@ export default function Dashboard(){
     }
 
     fetchTools()
-  },[])
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -79,8 +79,8 @@ export default function Dashboard(){
           <Link to="/devcpp" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
             💻 C/C++ Compiler
           </Link>
-          <Link to="/profile" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
-            👤 Profile & Settings
+          <Link to="/settings" className="px-6 py-4 bg-white text-indigo-600 border border-indigo-600 rounded hover:bg-indigo-50 transition text-center">
+            ⚙️ Settings
           </Link>
         </div>
       </div>

@@ -90,9 +90,7 @@ export const supportAPI = {
 
 export const profileAPI = {
   me: () => api.get('/users/me'),
-  changePassword: (payload) => api.post('/users/change-password', payload),
-  forgotPassword: (payload) => api.post('/users/forgot-password', payload),
-  resetPassword: (payload) => api.post('/users/reset-password', payload)
+  changePassword: (payload) => api.put('/users/change-password', payload),
 }
 
 // Dev-C++ compile API helper

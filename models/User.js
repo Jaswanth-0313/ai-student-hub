@@ -6,8 +6,6 @@ const UserSchema = new mongoose.Schema({
   password: { type: String },
   provider: { type: String, enum: ['local', 'google'], default: 'local' },
   googleId: { type: String },
-  resetToken: { type: String },
-  resetExpires: { type: Date },
   accountStatus: { type: String, enum: ['active','pending','disabled'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });

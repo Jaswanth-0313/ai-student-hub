@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext'
 
-export default function Navbar(){
+export default function Navbar() {
   const { user, logout } = useContext(AuthContext)
   const [open, setOpen] = useState(false)
   return (
@@ -16,7 +16,7 @@ export default function Navbar(){
         <div className="lg:hidden">
           <button aria-label="Toggle menu" onClick={() => setOpen(!open)} className="p-2 rounded-md border">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 6h14M3 10h14M3 14h14" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 6h14M3 10h14M3 14h14" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -26,7 +26,7 @@ export default function Navbar(){
           <Link to="/tools" className="text-sm text-gray-700 hover:text-indigo-600 transition">Tools</Link>
           <Link to="/info" className="text-sm text-gray-700 hover:text-indigo-600 transition">Information</Link>
           <Link to="/support" className="text-sm text-gray-700 hover:text-indigo-600 transition">Support</Link>
-          <Link to="/profile" className="text-sm text-gray-700 hover:text-indigo-600 transition">Profile</Link>
+          <Link to="/settings" className="text-sm text-gray-700 hover:text-indigo-600 transition">Settings</Link>
           {user ? (
             <>
               <span className="text-sm text-gray-600">{user.name}</span>
@@ -44,7 +44,7 @@ export default function Navbar(){
               <Link to="/tools" onClick={() => setOpen(false)} className="text-sm text-gray-700">Tools</Link>
               <Link to="/info" onClick={() => setOpen(false)} className="text-sm text-gray-700">Information</Link>
               <Link to="/support" onClick={() => setOpen(false)} className="text-sm text-gray-700">Support</Link>
-              <Link to="/profile" onClick={() => setOpen(false)} className="text-sm text-gray-700">Profile</Link>
+              <Link to="/settings" onClick={() => setOpen(false)} className="text-sm text-gray-700">Settings</Link>
               {user ? (
                 <>
                   <span className="text-sm text-gray-600">{user.name}</span>
