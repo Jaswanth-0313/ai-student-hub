@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react'
-import { CheckCircle, Globe, Link as LinkIcon, Lock, Plus, Trash2, X } from 'lucide-react'
+import { CheckCircle2, ExternalLink, Globe, Info as InfoIcon, Link as LinkIcon, Lock, Plus, Trash2, X } from 'lucide-react'
 import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 import { PageContainer } from '../components/ui/PageContainer'
