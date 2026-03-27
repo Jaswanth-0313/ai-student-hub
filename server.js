@@ -226,10 +226,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 app.use(express.static(path.resolve(__dirname, "dist")));
 
 // SPA Fallback: Must be the last route.
-// Handles direct links for React Router.
-app.get("*", (req, res) => {
+// Express 5.0 compatibility: use '/*' instead of '*'
+app.get("/*", (req, res) => {
   res.sendFile(path.resolve(__dirname, "dist", "index.html"));
 });
+
 
 
 
