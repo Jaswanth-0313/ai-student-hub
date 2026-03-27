@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const __dirname = path.resolve();
 
 const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
@@ -53,13 +54,29 @@ app.use('/api/users/login', authLimiter);
 app.use('/api/users/create', authLimiter);
 app.use('/api/users/forgot-password', authLimiter);
 app.use('/api/tools/devcpp/compile', authLimiter);
-// Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated), otherwise allow all
+// Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  'http://127.0.0.1:5173',
+  process.env.FRONTEND_URL,
+  'https://ai-student-hub-cwql.onrender.com'
+].filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [(process.env.FRONTEND_URL || 'http://localhost:3000')],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true
-}
-if (!process.env.CORS_ORIGIN) console.warn('CORS_ORIGIN not set; restricting to FRONTEND_URL or localhost by default');
+};
+
 app.use(cors(corsOptions));
 
 console.log("⏳ Connecting to MongoDB...");
@@ -207,21 +224,14 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 // Serve static files AFTER API routes
 app.use(express.static(path.join(__dirname, "frontend/dist")));
 
-// If request starts with /api and hasn't matched any route, return JSON 404
-app.use('/api', (req, res) => {
-  return res.status(404).json({
-    message: 'Endpoint not found',
-    availableEndpoints: 'GET /api/docs'
-  });
-});
-
-// Serve SPA index.html for all other GET requests (allow client-side routing)
-app.get('*', (req, res) => {
-  // Only handle GET requests and exclude /api
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ message: 'API endpoint not found' });
+// Production SPA Fallback: Must be at the VERY END
+// This ensures that all React Router paths return index.html
+app.use((req, res) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, "frontend/dist", "index.html"));
+  } else if (req.path.startsWith('/api')) {
+    res.status(404).json({ message: 'API endpoint not found' });
   }
-  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;

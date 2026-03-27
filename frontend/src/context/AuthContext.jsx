@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
         const userObj = {
           ...firebaseUser,
           id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student'
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || ''
         };
         setUser(userObj)
       } else {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
         ...prev,
         ...userData,
         id: userData.uid || userData.firebaseUID || prev?.id,
-        name: userData.name || userData.displayName || prev?.name || 'Student'
+        name: userData.name || userData.displayName || prev?.name || ''
       }));
     }
   }
