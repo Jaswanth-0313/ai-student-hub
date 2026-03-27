@@ -4,7 +4,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-const __dirname = path.resolve();
+// Note: __dirname is already available in CommonJS environments
+
 
 const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
@@ -222,17 +223,18 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-app.use(express.static(path.join(__dirname, "frontend/dist")));
+app.use(express.static(path.join(__dirname, "frontend", "dist")));
 
 // Production SPA Fallback: Must be at the VERY END
-// This ensures that all React Router paths return index.html
 app.use((req, res) => {
   if (req.method === 'GET' && !req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, "frontend/dist", "index.html"));
-  } else if (req.path.startsWith('/api')) {
-    res.status(404).json({ message: 'API endpoint not found' });
+    res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+  } else {
+    // If not a GET request or it's an /api route, return consistent 404
+    res.status(404).json({ message: 'Resource not found' });
   }
 });
+
 
 const PORT = process.env.PORT || 5000;
 // app.listen moved inside mongoose.connect.then() (lines 63-80)
