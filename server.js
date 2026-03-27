@@ -223,12 +223,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-app.use(express.static(path.join(__dirname, "frontend", "dist")));
+app.use(express.static(path.join(__dirname, "dist")));
 
 // Production SPA Fallback: Must be at the VERY END
 app.use((req, res) => {
   if (req.method === 'GET' && !req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
   } else {
     // If not a GET request or it's an /api route, return consistent 404
     res.status(404).json({ message: 'Resource not found' });
