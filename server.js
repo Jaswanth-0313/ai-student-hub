@@ -223,27 +223,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-app.use(express.static(path.join(__dirname, "dist")));
+app.use(express.static(path.resolve(__dirname, "dist")));
 
-// Production SPA Fallback: MUST BE THE LAST ROUTE
-// This handles all direct links (e.g., /dashboard) by serving index.html
+// SPA Fallback: Must be the last route.
+// Handles direct links for React Router.
 app.get("*", (req, res) => {
-  const indexPath = path.resolve(__dirname, "dist", "index.html");
-
-  // Log the path for forensic debugging on Render
-  // console.log("🔍 Serving SPA from:", indexPath); 
-
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error("❌ Error sending index.html. Path attempted:", indexPath);
-      console.error("❌ Full Error:", err);
-      // Fallback if index.html is truly missing
-      res.status(404).json({
-        message: "Frontend distribution not found. Please ensure 'npm run build' was executed.",
-        pathAttempted: indexPath
-      });
-    }
-  });
+  res.sendFile(path.resolve(__dirname, "dist", "index.html"));
 });
 
 
