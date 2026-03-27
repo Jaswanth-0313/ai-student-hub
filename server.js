@@ -216,15 +216,12 @@ app.use('/api', (req, res) => {
 });
 
 // Serve SPA index.html for all other GET requests (allow client-side routing)
-app.use((req, res, next) => {
-  if (req.method !== 'GET') return next();
-  if (req.path.startsWith('/api')) return next();
-  // If the client accepts HTML, serve the SPA with no-cache headers
-  if (req.accepts && req.accepts('html')) {
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+app.get('*', (req, res) => {
+  // Only handle GET requests and exclude /api
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ message: 'API endpoint not found' });
   }
-  next();
+  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
