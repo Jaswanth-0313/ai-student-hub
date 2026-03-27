@@ -1,58 +1,54 @@
 import React, { createContext, useState, useEffect } from 'react'
-import api, { setAuthToken } from '../services/api'
+import { auth } from '../firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 
 export const AuthContext = createContext()
 
-export function AuthProvider({ children }){
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(!!token)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(()=>{
-    // Check URL for token (OAuth redirect)
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const urlToken = params.get('token')
-      if (urlToken && !token) {
-        localStorage.setItem('token', urlToken)
-        setToken(urlToken)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Normalize: preferred name > displayName > email prefix
+        const userObj = {
+          ...firebaseUser,
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Student'
+        };
+        setUser(userObj)
+      } else {
+        setUser(null)
       }
-    } catch (e) {}
-
-    if (token){
-      setAuthToken(token)
-      // fetch basic dashboard to get user info
-      api.get('/dashboard')
-        .then(res => {
-          setUser(res.data.user)
-        })
-        .catch(()=>{
-          setToken(null)
-          localStorage.removeItem('token')
-          setAuthToken(null)
-        })
-        .finally(()=>setLoading(false))
-    } else {
       setLoading(false)
-    }
-  },[token])
+    })
 
-  const login = (newToken, userObj) => {
-    setToken(newToken)
-    setUser(userObj)
-    setAuthToken(newToken)
-    localStorage.setItem('token', newToken)
+    return () => unsubscribe()
+  }, [])
+
+  const login = (userData) => {
+    if (userData) {
+      // Merge: STRONGLY favor data from backend sync if it exists (contains 'name')
+      setUser(prev => ({
+        ...prev,
+        ...userData,
+        id: userData.uid || userData.firebaseUID || prev?.id,
+        name: userData.name || userData.displayName || prev?.name || 'Student'
+      }));
+    }
   }
 
-  const logout = () => {
-    setToken(null)
-    setUser(null)
-    setAuthToken(null)
-    localStorage.removeItem('token')
+  const logout = async (broadcast = true) => {
+    if (broadcast) {
+      window.dispatchEvent(new Event('manual_logout'));
+    }
+    await signOut(auth);
+    setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ token: user?.uid, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

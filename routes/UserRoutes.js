@@ -145,6 +145,67 @@ router.post(
     }
   });
 
+// ✅ FIREBASE SYNC (Create/Update user after Firebase Auth)
+router.post("/firebase", async (req, res) => {
+  console.log("🔍 Firebase user received");
+  try {
+    const { firebaseUID, email, name, provider } = req.body;
+
+    if (!firebaseUID || !email) {
+      console.error("❌ Missing required fields: firebaseUID or email");
+      return res.status(400).json({ message: "firebaseUID and email are required" });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Upsert user: find by firebaseUID or email
+    let user = await User.findOne({
+      $or: [{ firebaseUID: firebaseUID }, { email: normalizedEmail }]
+    });
+
+    if (user) {
+      console.log("🔍 Updating existing user...");
+      user.lastLogin = new Date();
+      if (!user.firebaseUID) user.firebaseUID = firebaseUID;
+      if (name) user.name = name;
+      if (provider) user.provider = provider;
+      await user.save();
+      console.log("✅ User saved to MongoDB");
+    } else {
+      console.log("🔍 Creating new user...");
+      user = new User({
+        firebaseUID: firebaseUID,
+        email: normalizedEmail,
+        name: name || 'New User',
+        provider: provider || 'firebase',
+        lastLogin: new Date()
+      });
+      await user.save();
+      console.log("✅ User saved to MongoDB");
+    }
+
+    console.log("🎉 USER STORED IN MONGODB SUCCESSFULLY");
+
+    // Generate backend JWT for session persistence
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(200).json({
+      message: "Firebase sync successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        firebaseUID: user.firebaseUID
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Firebase Sync Error:", err);
+    res.status(500).json({ message: "Internal server error during sync", error: err.message });
+  }
+});
+
 // ---------- Authenticated routes ----------
 // Get current user profile
 router.get('/me', authMiddleware, async (req, res) => {

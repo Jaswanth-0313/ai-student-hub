@@ -1,8 +1,11 @@
 import React, { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { UserPlus, Mail, Lock, User, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react'
-import api, { authAPI, setAuthToken } from '../services/api'
+import { UserPlus, Mail, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react'
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from '../firebase'
 import { AuthContext } from '../context/AuthContext'
+import { authAPI, setAuthToken } from '../services/api'
+import { useSession } from '../context/SessionContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 
@@ -14,6 +17,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useContext(AuthContext)
+  const { initFirebaseSession } = useSession()
 
   const submit = async (e) => {
     e.preventDefault()
@@ -34,20 +38,90 @@ export default function Signup() {
     }
 
     try {
-      const res = await authAPI.register({ name, email, password })
-      const { token, user } = res.data
+      console.log("🚀 Starting Signup process for:", normalizedEmail);
 
-      if (token && user) {
-        setAuthToken(token)
-        login(token, user)
-        navigate('/dashboard')
-      } else {
-        navigate('/login')
+      // 1. Firebase Authentication
+      console.log("🔹 Step 1: Firebase createUserWithEmailAndPassword...");
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password)
+      console.log("✅ Firebase User Created:", userCredential.user.uid);
+
+      await updateProfile(userCredential.user, { displayName: name });
+      const firebaseUser = userCredential.user;
+      firebaseUser.id = firebaseUser.uid;
+
+      // 2. Global Auth Context Update
+      login(firebaseUser)
+
+      // 3. Backend Synchronization (MongoDB)
+      try {
+        console.log("🔹 Syncing with backend MongoDB... User name:", name);
+        const syncRes = await authAPI.syncFirebaseUser({
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: name,
+          provider: 'local'
+        });
+
+        if (syncRes.data.token) {
+          setAuthToken(syncRes.data.token);
+        }
+
+        // 4. Update Global Context with Backend Data (contains official name)
+        if (syncRes.data.user) {
+          login(syncRes.data.user);
+        }
+
+        console.log("✅ Backend Sync Success:", syncRes.data);
+      } catch (syncErr) {
+        console.error("❌ Backend Sync Failed:", syncErr);
       }
+
+      console.log("🎉 Signup Complete! Navigating...");
+      navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Signup failed')
+      console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
+      console.error("❌ SIGNUP ERROR STACK:", err);
+      let msg = err.message;
+      if (err.code === 'auth/email-already-in-use') msg = 'Email is already taken';
+      setError(msg || 'Signup failed')
     } finally {
+      console.log("🏁 Signup sequence finished (setLoading(false))");
       setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError(null)
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      const firebaseUser = result.user
+      firebaseUser.id = firebaseUser.uid
+
+      login(firebaseUser)
+
+      // Sync Google User with Backend
+      try {
+        console.log("🔹 Syncing Google User with backend... Name:", firebaseUser.displayName);
+        const syncRes = await authAPI.syncFirebaseUser({
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          provider: 'google'
+        });
+
+        if (syncRes.data.user) {
+          login(syncRes.data.user);
+        }
+      } catch (syncErr) {
+        console.error("❌ Google Sync Failed:", syncErr);
+      }
+
+      await initFirebaseSession(firebaseUser)
+      navigate('/dashboard')
+    } catch (err) {
+      console.error("Google Login Error:", err)
+      setError(err.message || 'Google Login failed')
     }
   }
 
@@ -149,13 +223,14 @@ export default function Signup() {
             </div>
           </div>
 
-          <a
-            href="/api/users/google"
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
             className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
           >
             <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
             Continue with Google
-          </a>
+          </button>
         </form>
       </Card>
 

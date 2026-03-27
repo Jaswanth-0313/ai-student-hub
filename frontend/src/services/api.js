@@ -5,10 +5,8 @@ import axios from 'axios'
 // 1. `import.meta.env.VITE_API_BASE` (set at build time)
 // 2. At runtime, use current origin + '/api' (for static builds served from same host)
 // 3. Fallback to localhost for local development
-const buildTimeApi = import.meta.env.VITE_API_BASE
-const runtimeOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : null
-const API_BASE = buildTimeApi || (runtimeOrigin ? `${runtimeOrigin}/api` : 'http://localhost:5000/api')
-const isDevelopment = import.meta.env.DEV || (runtimeOrigin && runtimeOrigin.includes('localhost'))
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : (import.meta.env.VITE_API_BASE || '/api')
+const isDevelopment = import.meta.env.DEV
 
 // Log API configuration
 if (isDevelopment) {
@@ -63,11 +61,12 @@ export function setAuthToken(token) {
   }
 }
 
-// helper API methods
 export const authAPI = {
-  register: (data) => api.post('/users/create', data),
-  login: (data) => api.post('/users/login', data)
-}
+  syncFirebaseUser: async (userData) => {
+    // Send Firebase user details to backend for MongoDB sync
+    return api.post('/users/firebase', userData);
+  }
+};
 
 export const dashboardAPI = {
   getDashboard: () => api.get('/dashboard'),

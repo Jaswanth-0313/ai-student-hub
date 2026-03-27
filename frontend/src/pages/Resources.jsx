@@ -100,14 +100,26 @@ export default function Resources() {
               <Button
                 variant="primary"
                 className="flex-1 gap-2 text-xs h-9 bg-white/10 border-white/10 text-white hover:bg-white/20"
-                onClick={() => window.open(tool.url, '_blank')}
+                onClick={() => {
+                  const win = window.open(tool.url, '_blank');
+                  if (win) {
+                    if (!window.externalTabs) window.externalTabs = [];
+                    window.externalTabs.push(win);
+                  }
+                }}
               >
                 <Globe size={14} /> Visit
               </Button>
               <Button
                 variant="outline"
                 className="flex-1 gap-2 text-xs h-9 border-white/5 hover:border-white/20"
-                onClick={() => window.open(tool.setupUrl, '_blank')}
+                onClick={() => {
+                  const win = window.open(tool.setupUrl, '_blank');
+                  if (win) {
+                    if (!window.externalTabs) window.externalTabs = [];
+                    window.externalTabs.push(win);
+                  }
+                }}
               >
                 <Settings size={14} /> Setup
               </Button>

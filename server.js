@@ -19,9 +19,22 @@ const compression = require('compression');
 
 const app = express();   // ⭐ CREATE APP FIRST
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Security middlewares
-app.use(helmet());
+// Security middlewares with relaxed CSP for Firebase
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "img-src": ["'self'", "data:", "https://www.gstatic.com", "https://*.googleapis.com"],
+      "connect-src": ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebaseapp.com"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://www.gstatic.com", "https://apis.google.com"],
+      "frame-src": ["'self'", "https://*.firebaseapp.com"]
+    },
+  },
+}));
 app.use(compression());
 // Initialize passport for OAuth
 app.use(passport.initialize());
@@ -42,16 +55,34 @@ app.use('/api/users/forgot-password', authLimiter);
 app.use('/api/tools/devcpp/compile', authLimiter);
 // Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated), otherwise allow all
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [ (process.env.FRONTEND_URL || 'http://localhost:3000') ],
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [(process.env.FRONTEND_URL || 'http://localhost:3000')],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true
 }
 if (!process.env.CORS_ORIGIN) console.warn('CORS_ORIGIN not set; restricting to FRONTEND_URL or localhost by default');
 app.use(cors(corsOptions));
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.log("MongoDB Connection Failed: ", err));
+console.log("⏳ Connecting to MongoDB...");
+mongoose.connect(process.env.MONGO_URI, {
+  dbName: "ai_student_hub"
+})
+  .then(() => {
+    console.log("✅ MongoDB connected successfully to: " + mongoose.connection.name);
+
+    // Start server ONLY after DB is ready
+    app.listen(PORT, () => {
+      console.log("🚀 AI Student Hub Server started on port " + PORT);
+      console.log("📖 API Documentation: http://localhost:" + PORT + "/api/docs");
+      console.log("🌐 Frontend: http://localhost:" + PORT);
+    });
+
+    // Ensure admin account is present
+    ensureAdmin();
+  })
+  .catch(err => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1); // Stop if DB fails
+  });
 
 // Warn when critical environment variables are missing
 if (!process.env.MONGO_URI) {
@@ -101,6 +132,7 @@ app.get("/api/docs", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
+
 app.use("/api/tools", toolRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use('/api/support', supportRoutes);
@@ -113,8 +145,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || 
-      (process.env.BASE_URL ? process.env.BASE_URL + '/api/users/google/callback' : 'http://localhost:5000/api/users/google/callback')
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || (process.env.BASE_URL ? `${process.env.BASE_URL}/api/users/google/callback` : "http://localhost:5000/api/users/google/callback")
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       const email = profile.emails && profile.emails[0] && profile.emails[0].value;
@@ -153,23 +184,28 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     }
   }));
 
-  app.get('/api/users/google', passport.authenticate('google', { scope: ['profile','email'] }));
+  app.get('/api/users/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
   app.get('/api/users/google/callback', passport.authenticate('google', { session: false, failureRedirect: (process.env.FRONTEND_URL || '/') + '?auth=failed' }), (req, res) => {
     // Issue JWT and redirect to frontend with token
     if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
     const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    const redirectTo = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = new URL(redirectTo);
-    url.searchParams.set('token', token);
-    return res.redirect(url.toString());
+    const redirectTo = process.env.FRONTEND_URL || 'http://localhost:5173';
+    try {
+      const url = new URL(redirectTo);
+      url.searchParams.set('token', token);
+      return res.redirect(url.toString());
+    } catch (e) {
+      console.error("Invalid FRONTEND_URL during redirect:", redirectTo);
+      return res.redirect(`/?token=${token}`);
+    }
   });
 } else {
   console.warn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env to enable.');
 }
 
 // Serve static files AFTER API routes
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "frontend/dist")));
 
 // If request starts with /api and hasn't matched any route, return JSON 404
 app.use('/api', (req, res) => {
@@ -186,18 +222,13 @@ app.use((req, res, next) => {
   // If the client accepts HTML, serve the SPA with no-cache headers
   if (req.accepts && req.accepts('html')) {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    return res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
   }
   next();
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log("🚀 AI Student Hub Server started on port " + PORT);
-  console.log("📖 API Documentation: http://localhost:" + PORT + "/api/docs");
-  console.log("🌐 Frontend: http://localhost:" + PORT);
-});
+// app.listen moved inside mongoose.connect.then() (lines 63-80)
 
 // Ensure admin account is present/rotated on startup (if env vars provided)
 const bcrypt = require('bcryptjs');
@@ -218,5 +249,5 @@ async function ensureAdmin() {
 }
 
 mongooseConn.once('open', () => {
-  ensureAdmin();
+  // ensureAdmin(); // Handled in .then()
 });
