@@ -3,14 +3,13 @@ services:
     name: ai-student-hub
     env: node
     plan: free
-    # Build command:
-    # 1. Install root (backend) dependencies
-    # 2. Install and build frontend — Vite outputs to root `dist/` via outDir: '../dist'
-    buildCommand: npm install && npm install --prefix frontend && npm run build --prefix frontend
+    # Build: install backend deps, then cd into frontend and build
+    # Vite outDir is 'dist' (inside frontend/dist), server serves from frontend/dist
+    buildCommand: npm install && cd frontend && npm install && npm run build
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
-    # Set these in the Render dashboard (secrets — do NOT commit to repo):
+    # Set these in the Render dashboard (never commit secrets):
     # MONGO_URI, JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
     # GOOGLE_CALLBACK_URL, FRONTEND_URL, CORS_ORIGIN

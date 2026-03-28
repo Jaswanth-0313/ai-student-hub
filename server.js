@@ -162,7 +162,7 @@ app.use('/api/admin', adminRoutes);
 // Health Check for Production Debugging
 app.get("/api/health", (req, res) => {
   const fs = require('fs');
-  const distPath = path.resolve(__dirname, "dist");
+  const healthDistPath = path.resolve(__dirname, "frontend", "dist");
   res.json({
     status: "ok",
     uptime: process.uptime(),
@@ -170,8 +170,8 @@ app.get("/api/health", (req, res) => {
     env: process.env.NODE_ENV,
     filesystem: {
       rootFiles: fs.readdirSync(__dirname).filter(f => !f.startsWith('.')),
-      distExists: fs.existsSync(distPath),
-      indexExists: fs.existsSync(path.join(distPath, "index.html"))
+      distExists: fs.existsSync(healthDistPath),
+      indexExists: fs.existsSync(path.join(healthDistPath, "index.html"))
     }
   });
 });
@@ -241,7 +241,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-const distPath = path.resolve(__dirname, "dist");
+const distPath = path.resolve(__dirname, "frontend", "dist");
 app.use(express.static(distPath));
 
 // API 404 handler - important to keep this before the SPA fallback
