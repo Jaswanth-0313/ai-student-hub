@@ -3,8 +3,9 @@ services:
     name: ai-student-hub
     env: node
     plan: free
-    # Build command runs build.sh which installs deps and builds the Vite frontend
-    buildCommand: bash build.sh
+    # frontend/dist is pre-built and committed to git.
+    # Render only needs to install backend dependencies.
+    buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV

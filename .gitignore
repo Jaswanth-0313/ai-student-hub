@@ -8,8 +8,8 @@ node_modules/
 
 # Production
 /build
-/dist
-frontend/dist
+# frontend/dist is committed so Render can serve it without a build step
+# /dist (root-level dist, if any)
 
 # Misc
 .DS_Store
