@@ -3,9 +3,8 @@ services:
     name: ai-student-hub
     env: node
     plan: free
-    # Build: install backend deps, then cd into frontend and build
-    # Vite outDir is 'dist' (inside frontend/dist), server serves from frontend/dist
-    buildCommand: npm install && cd frontend && npm install && npm run build
+    # Build command runs build.sh which installs deps and builds the Vite frontend
+    buildCommand: bash build.sh
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
