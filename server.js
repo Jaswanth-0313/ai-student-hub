@@ -228,8 +228,35 @@ app.use(express.static(path.resolve(__dirname, "dist")));
 // SPA Fallback: Must be the last route.
 // Express 5.0 compatibility: use '/*' instead of '*'
 app.get("/*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "dist", "index.html"));
+  const fs = require('fs');
+  const distPath = path.resolve(__dirname, "dist");
+  const indexPath = path.join(distPath, "index.html");
+
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+
+  // FORENSIC DEBUGGING: If index.html is missing, list the directory
+  try {
+    const rootFiles = fs.readdirSync(__dirname);
+    const distFiles = fs.existsSync(distPath) ? fs.readdirSync(distPath) : 'DIST FOLDER MISSING';
+
+    res.status(404).send(`
+      <h1>Front-end Not Found (Forensic Debug)</h1>
+      <p>Path attempted: ${indexPath}</p>
+      <hr>
+      <h3>Root Directory Logs:</h3>
+      <pre>${JSON.stringify(rootFiles, null, 2)}</pre>
+      <h3>Dist Directory Logs:</h3>
+      <pre>${typeof distFiles === 'string' ? distFiles : JSON.stringify(distFiles, null, 2)}</pre>
+      <hr>
+      <p>Correction: Ensure Render build command generates 'dist' at root.</p>
+    `);
+  } catch (err) {
+    res.status(404).send("Not Found");
+  }
 });
+
 
 
 
