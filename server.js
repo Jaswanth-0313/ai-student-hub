@@ -20,6 +20,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 
 const app = express();   // ⭐ CREATE APP FIRST
+const PORT = process.env.PORT || 5000;
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -240,38 +241,50 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-app.use(express.static(path.resolve(__dirname, "dist")));
+const distPath = path.resolve(__dirname, "dist");
+app.use(express.static(distPath));
+
+// API 404 handler - important to keep this before the SPA fallback
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+    docs: '/api/docs'
+  });
+});
 
 // SPA Fallback: Must be the last route.
-// Express 5.0 compatibility: use '/*' instead of '*'
-app.get("/*", (req, res) => {
-  const fs = require('fs');
-  const distPath = path.resolve(__dirname, "dist");
+// app.use() is used here for Express 5 compatibility (app.get("*") is invalid in Express 5).
+// Only serve index.html for GET requests; API 404s handled above.
+const fs = require('fs');
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+
   const indexPath = path.join(distPath, "index.html");
 
   if (fs.existsSync(indexPath)) {
+    // No-cache so users always get the latest SPA shell
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.sendFile(indexPath);
   }
 
-  // FORENSIC DEBUGGING: If index.html is missing, list the directory
-  try {
-    const rootFiles = fs.readdirSync(__dirname);
-    const distFiles = fs.existsSync(distPath) ? fs.readdirSync(distPath) : 'DIST FOLDER MISSING';
-
-    res.status(404).send(`
-      <h1>Front-end Not Found (Forensic Debug)</h1>
-      <p>Path attempted: ${indexPath}</p>
-      <hr>
-      <h3>Root Directory Logs:</h3>
-      <pre>${JSON.stringify(rootFiles, null, 2)}</pre>
-      <h3>Dist Directory Logs:</h3>
-      <pre>${typeof distFiles === 'string' ? distFiles : JSON.stringify(distFiles, null, 2)}</pre>
-      <hr>
-      <p>Correction: Ensure Render build command generates 'dist' at root.</p>
-    `);
-  } catch (err) {
-    res.status(404).send("Not Found");
-  }
+  // FALLBACK if dist/index.html is missing (e.g. build step failed on Render)
+  console.error(`❌ CRITICAL: Frontend build not found at ${indexPath}`);
+  res.status(404).send(`
+    <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+      <h1 style="color: #e11d48;">Frontend Not Found</h1>
+      <p>The server is running but the frontend build (<code>dist/index.html</code>) is missing.</p>
+      <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+        <strong>Render Fix:</strong>
+        <ol>
+          <li>Build Command: <code>npm install &amp;&amp; npm install --prefix frontend &amp;&amp; npm run build --prefix frontend</code></li>
+          <li>Start Command: <code>node server.js</code></li>
+          <li>Check Render build logs for Vite errors</li>
+        </ol>
+      </div>
+      <p style="font-size: 0.875rem; color: #64748b;">Expected path: ${indexPath}</p>
+    </div>
+  `);
 });
 
 
@@ -279,8 +292,7 @@ app.get("/*", (req, res) => {
 
 
 
-const PORT = process.env.PORT || 5000;
-// app.listen moved inside mongoose.connect.then() (lines 63-80)
+// PORT is declared at the top of the file
 
 // Ensure admin account is present/rotated on startup (if env vars provided)
 const bcrypt = require('bcryptjs');

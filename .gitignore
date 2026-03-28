@@ -46,3 +46,9 @@ yarn-integrity
 
 # Mac files
 .DS_Store
+
+# Temporary files (local only)
+temp_backup/
+build_log.txt
+build_detailed_log.txt
+*.log
