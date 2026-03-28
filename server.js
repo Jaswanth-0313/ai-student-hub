@@ -4,8 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-// Note: __dirname is already available in CommonJS environments
-
+const fs = require("fs");
 
 const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
@@ -241,8 +240,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 // Serve static files AFTER API routes
-const distPath = path.resolve(__dirname, "frontend", "dist");
-app.use(express.static(distPath));
+const publicPath = path.join(__dirname, 'public');
+const distPath = path.join(__dirname, 'frontend', 'dist');
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
+app.use(express.static(publicPath));
 
 // API 404 handler - important to keep this before the SPA fallback
 app.use('/api', (req, res) => {
@@ -256,35 +260,26 @@ app.use('/api', (req, res) => {
 // SPA Fallback: Must be the last route.
 // app.use() is used here for Express 5 compatibility (app.get("*") is invalid in Express 5).
 // Only serve index.html for GET requests; API 404s handled above.
-const fs = require('fs');
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
+  if (req.path.startsWith('/api')) return next();
 
-  const indexPath = path.join(distPath, "index.html");
+  const candidateIndex = fs.existsSync(path.join(distPath, 'index.html'))
+    ? path.join(distPath, 'index.html')
+    : path.join(publicPath, 'index.html');
 
-  if (fs.existsSync(indexPath)) {
-    // No-cache so users always get the latest SPA shell
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.sendFile(indexPath);
+  if (!fs.existsSync(candidateIndex)) {
+    console.error(`❌ CRITICAL: Frontend build not found. Checked dist: ${distPath}, public: ${publicPath}`);
+    return res.status(500).send(`
+      <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+        <h1 style="color: #e11d48;">Frontend Not Found</h1>
+        <p>The server is running but the frontend build is missing.</p>
+      </div>
+    `);
   }
 
-  // FALLBACK if dist/index.html is missing (e.g. build step failed on Render)
-  console.error(`❌ CRITICAL: Frontend build not found at ${indexPath}`);
-  res.status(404).send(`
-    <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-      <h1 style="color: #e11d48;">Frontend Not Found</h1>
-      <p>The server is running but the frontend build (<code>dist/index.html</code>) is missing.</p>
-      <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-        <strong>Render Fix:</strong>
-        <ol>
-          <li>Build Command: <code>npm install &amp;&amp; npm install --prefix frontend &amp;&amp; npm run build --prefix frontend</code></li>
-          <li>Start Command: <code>node server.js</code></li>
-          <li>Check Render build logs for Vite errors</li>
-        </ol>
-      </div>
-      <p style="font-size: 0.875rem; color: #64748b;">Expected path: ${indexPath}</p>
-    </div>
-  `);
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(candidateIndex);
 });
 
 
