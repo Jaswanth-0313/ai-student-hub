@@ -158,6 +158,23 @@ app.use('/api/support', supportRoutes);
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
 
+// Health Check for Production Debugging
+app.get("/api/health", (req, res) => {
+  const fs = require('fs');
+  const distPath = path.resolve(__dirname, "dist");
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    __dirname,
+    env: process.env.NODE_ENV,
+    filesystem: {
+      rootFiles: fs.readdirSync(__dirname).filter(f => !f.startsWith('.')),
+      distExists: fs.existsSync(distPath),
+      indexExists: fs.existsSync(path.join(distPath, "index.html"))
+    }
+  });
+});
+
 // ---- Google OAuth routes (stateless, issues JWT) ----
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
