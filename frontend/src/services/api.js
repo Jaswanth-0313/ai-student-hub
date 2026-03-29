@@ -1,28 +1,16 @@
 import axios from 'axios'
 
-<<<<<<< HEAD
-const VITE_API_BASE = import.meta.env.VITE_API_BASE
-
-const API_BASE = VITE_API_BASE || (
-  import.meta.env.DEV 
-    ? 'http://localhost:5000/api'  // Development: backend on 5000 with /api prefix
-    : `${window.location.origin}/api`  // Production: same host for proxy or integrated deployments
-)
-
+// Determine API base URL (production-first)
+// 1. VITE_API_BASE (preferred)
+// 2. VITE_API_URL + '/api'
+// 3. runtime origin '/api'
+// 4. local dev fallback
+const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : (import.meta.env.DEV ? 'http://localhost:5000/api' : `${window.location.origin}/api`))
 const isDevelopment = import.meta.env.DEV
 
-if (!isDevelopment && !VITE_API_BASE) {
-  console.warn('⚠️ VITE_API_BASE is not set. Using default production API base:', API_BASE);
+if (!isDevelopment && !import.meta.env.VITE_API_BASE) {
+  console.warn('⚠️ VITE_API_BASE is not set. Using defaults: ', API_BASE);
 }
-=======
-// Determine API base URL
-// Priority:
-// 1. `import.meta.env.VITE_API_BASE` (set at build time)
-// 2. At runtime, use current origin + '/api' (for static builds served from same host)
-// 3. Fallback to localhost for local development
-const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : (import.meta.env.VITE_API_BASE || '/api')
-const isDevelopment = import.meta.env.DEV
->>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
 
 // Log API configuration
 if (isDevelopment) {

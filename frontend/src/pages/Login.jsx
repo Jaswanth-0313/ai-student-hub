@@ -195,14 +195,9 @@ export default function Login() {
             </div>
           </div>
 
-<<<<<<< HEAD
-          <a
-            href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000'}/auth/google`}
-=======
           <button
             type="button"
             onClick={handleGoogleLogin}
->>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
             className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
           >
             <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
