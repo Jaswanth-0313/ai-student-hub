@@ -3,10 +3,32 @@ import { Link } from 'react-router-dom'
 import { Activity, Blocks, Code, Link as LinkIcon, Settings, Sparkles, TrendingUp } from 'lucide-react'
 import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
+import { openToolWindow } from '../utils/tabManager'
 import { PageContainer } from '../components/ui/PageContainer'
 import { SectionTitle } from '../components/ui/SectionTitle'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
+
+const TOOL_FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'
+
+const TOOL_LOGOS = {
+  chatgpt: 'https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg',
+  lovable: 'https://cdn-icons-png.flaticon.com/512/1077/1077035.png',
+  gamma: 'https://cdn.simpleicons.org/gamma',
+  figma: 'https://cdn.simpleicons.org/figma',
+  canva: 'https://cdn.simpleicons.org/canva',
+  github: 'https://cdn.simpleicons.org/github',
+  leetcode: 'https://cdn.simpleicons.org/leetcode',
+  notebooklm: 'https://cdn.simpleicons.org/google',
+  devcpp: 'https://cdn-icons-png.flaticon.com/512/6132/6132222.png',
+  gmail: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png'
+}
+
+const getToolLogo = (tool) => {
+  if (tool?.key && TOOL_LOGOS[tool.key]) return TOOL_LOGOS[tool.key]
+  if (tool?.logo) return tool.logo
+  return TOOL_FALLBACK_LOGO
+}
 
 export default function Dashboard() {
   const [tools, setTools] = useState([])
@@ -151,23 +173,51 @@ export default function Dashboard() {
           </section>
 
           <section>
-            <SectionTitle title="Your Integrations" />
+            <SectionTitle title="Connected Tools" />
             {tools.filter(t => t && t.connected).length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {tools.filter(t => t && t.connected).map(t => (
-                  <Card key={t.key} className="flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                      <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Card key={t.key} className="flex flex-col justify-between p-4">
+                    <div className="flex flex-col items-center text-center mb-3">
+                      <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center overflow-hidden mb-2">
+                        <img
+                          src={getToolLogo(t)}
+                          alt={`${t.name} logo`}
+                          className="h-full w-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null
+                            e.currentTarget.src = TOOL_FALLBACK_LOGO
+                          }}
+                        />
+                      </div>
+                      <h4 className="text-lg font-bold text-white flex items-center gap-2 justify-center">
                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                         {t.name}
                       </h4>
-                      <div className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-md font-medium">
-                        Active
-                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-4">
-                      Connected since {t.connectedAt ? new Date(t.connectedAt).toLocaleDateString() : 'Recently'}
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-md font-medium">Connected</div>
+                      <span className="text-xs text-gray-400">{t.connectedAt ? new Date(t.connectedAt).toLocaleDateString() : 'Recently'}</span>
+                    </div>
+                    <div className="mt-1 flex gap-2">
+                      <Button
+                        variant="primary"
+                        className="flex-1 text-xs h-8"
+                        onClick={() => openToolWindow(t.key, t.url || '/')}>
+                        Open
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 text-xs h-8 border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        onClick={async () => {
+                          await api.delete(`/tools/disconnect/${t.key}`)
+                          const refreshed = await api.get('/tools')
+                          setTools(Array.isArray(refreshed.data) ? refreshed.data : refreshed.data.tools || [])
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
                   </Card>
                 ))}
               </div>

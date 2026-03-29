@@ -1,5 +1,6 @@
 import React from 'react'
 import { ExternalLink, Globe, Layout, LifeBuoy, Settings, Sparkles, Zap } from 'lucide-react'
+import { openToolWindow } from '../utils/tabManager'
 import { PageContainer } from '../components/ui/PageContainer'
 import { SectionTitle } from '../components/ui/SectionTitle'
 import { Card } from '../components/ui/Card'
@@ -68,6 +69,26 @@ const TOOLS = [
     category: 'Practice',
     description: 'Practice coding problems for interviews',
     gradient: 'from-[#ffa116]/20 to-[#ffa116]/5'
+  },
+  {
+    name: 'DevC++ v5.11',
+    key: 'devcpp',
+    icon: '💻',
+    url: 'https://sourceforge.net/projects/orwelldevcpp/',
+    category: 'IDE',
+    description: 'DevC++ v5.11 is used by students for C and C++ programming practice, for local C/C++ exercises and compiling.',
+    gradient: 'from-[#10a37f]/20 to-[#10a37f]/5',
+    usage: 'Install from SourceForge and run the IDE for offline code practice.'
+  },
+  {
+    name: 'Gmail',
+    key: 'gmail',
+    icon: '📧',
+    url: 'https://mail.google.com/',
+    category: 'Communication',
+    description: 'Gmail is automatically connected using your login email.',
+    gradient: 'from-[#ea4335]/20 to-[#ea4335]/5',
+    usage: 'Click Open to launch Gmail in a new tab.'
   }
 ]
 
@@ -96,21 +117,28 @@ export default function Resources() {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">{tool.description}</p>
             </div>
 
+            {tool.usage && (
+              <p className="text-xs text-gray-300 mb-3">{tool.usage}</p>
+            )}
+
             <div className="flex gap-2">
               <Button
                 variant="primary"
                 className="flex-1 gap-2 text-xs h-9 bg-white/10 border-white/10 text-white hover:bg-white/20"
-                onClick={() => window.open(tool.url, '_blank')}
+                onClick={() => openToolWindow(tool.key || tool.name, tool.url)}
               >
-                <Globe size={14} /> Visit
+                <Globe size={14} /> Open
               </Button>
-              <Button
-                variant="outline"
-                className="flex-1 gap-2 text-xs h-9 border-white/5 hover:border-white/20"
-                onClick={() => window.open(tool.setupUrl, '_blank')}
-              >
-                <Settings size={14} /> Setup
-              </Button>
+
+              {tool.key !== 'gmail' && tool.setupUrl && (
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2 text-xs h-9 border-white/5 hover:border-white/20"
+                  onClick={() => openToolWindow(`${tool.key || tool.name}-setup`, tool.setupUrl)}
+                >
+                  <Settings size={14} /> Setup
+                </Button>
+              )}
             </div>
           </Card>
         ))}

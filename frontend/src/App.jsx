@@ -7,16 +7,18 @@ import Dashboard from './pages/Dashboard'
 import Tools from './pages/Tools'
 import Resources from './pages/Resources'
 import Info from './pages/Info'
-import DevCPP from './pages/DevCPP'
 import Support from './pages/Support'
+import DevCPP from './pages/DevCPP'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
+import Gmail from './pages/Gmail'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 
 export default function App() {
+  console.log('✅ App loaded')
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen"> 
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/landing" element={<Landing />} />
@@ -31,6 +33,7 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><Navbar /><Profile /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Navbar /><Settings /></ProtectedRoute>} />
         <Route path="/devcpp" element={<ProtectedRoute><Navbar /><DevCPP /></ProtectedRoute>} />
+        <Route path="/gmail" element={<ProtectedRoute><Gmail /></ProtectedRoute>} />
         <Route path="*" element={<div className="p-6">Page not found</div>} />
       </Routes>
     </div>

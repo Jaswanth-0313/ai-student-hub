@@ -18,6 +18,14 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
+    // Basic client-side validation
+    const normalizedEmail = String(email).trim().toLowerCase()
+    if (!normalizedEmail.endsWith('@gmail.com')) {
+      setLoading(false)
+      return setError('Please use a @gmail.com email address')
+    }
+
     try {
       const res = await authAPI.login({ email, password })
       const { token, user } = res.data
@@ -117,7 +125,7 @@ export default function Login() {
           </div>
 
           <a
-            href="/api/users/google"
+            href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000'}/auth/google`}
             className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
           >
             <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />

@@ -6,6 +6,7 @@ import { cn } from './ui/Card'
 import { Button } from './ui/Button'
 
 export default function Navbar() {
+  console.log('✅ Navbar rendered')
   const { user, logout } = useContext(AuthContext)
   const [open, setOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)

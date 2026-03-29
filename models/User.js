@@ -6,6 +6,10 @@ const UserSchema = new mongoose.Schema({
   password: { type: String },
   provider: { type: String, enum: ['local', 'google'], default: 'local' },
   googleId: { type: String },
+  // ✅ Gmail OAuth tokens
+  googleAccessToken: { type: String },
+  googleRefreshToken: { type: String },
+  googleTokenExpiry: { type: Date },
   accountStatus: { type: String, enum: ['active','pending','disabled'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });

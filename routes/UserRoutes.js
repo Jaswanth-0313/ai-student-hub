@@ -5,6 +5,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const validator = require('validator');
 const authMiddleware = require('../middleware/authMiddleware');
+const ToolConnection = require('../models/ToolConnection');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { v4: uuidv4 } = require('uuid');
@@ -73,6 +74,17 @@ router.post(
       if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
       const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
+      // Auto-connect Gmail on signup
+      try {
+        await ToolConnection.findOneAndUpdate(
+          { userId: newUser._id, toolName: 'gmail' },
+          { userId: newUser._id, toolName: 'gmail', connected: true, connectedAt: new Date() },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (e) {
+        console.warn('Auto-connect Gmail failed on signup', e.message);
+      }
+
       res.status(201).json({
         message: "Signup successful",
         token,
@@ -128,6 +140,17 @@ router.post(
       // create token (use env JWT_SECRET in production)
       if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+      // Auto-connect Gmail on login
+      try {
+        await ToolConnection.findOneAndUpdate(
+          { userId: user._id, toolName: 'gmail' },
+          { userId: user._id, toolName: 'gmail', connected: true, connectedAt: new Date() },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (e) {
+        console.warn('Auto-connect Gmail failed on login', e.message);
+      }
 
       res.status(200).json({
         message: "Login successful",

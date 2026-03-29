@@ -9,8 +9,11 @@ const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
 const dashboardRoutes = require("./routes/DashboardRoutes");
 const supportRoutes = require("./routes/supportRoutes");
+const authRoutes = require("./routes/authRoutes");
+const gmailRoutes = require("./routes/gmailRoutes");
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const session = require('express-session');
 const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
@@ -19,12 +22,47 @@ const compression = require('compression');
 
 const app = express();   // ⭐ CREATE APP FIRST
 
+// Global crash safety
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
 app.use(express.json());
 // Security middlewares
 app.use(helmet());
 app.use(compression());
+
+// ✅ EXPRESS SESSION - Required for Passport OAuth
+app.use(session({
+  secret: process.env.JWT_SECRET || 'session-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
 // Initialize passport for OAuth
 app.use(passport.initialize());
+app.use(passport.session());
+
+// ✅ PASSPORT SERIALIZATION - Required for session handling
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
 
 // Basic rate limiter for auth and sensitive endpoints
 const authLimiter = rateLimit({
@@ -40,13 +78,33 @@ app.use('/api/users/login', authLimiter);
 app.use('/api/users/create', authLimiter);
 app.use('/api/users/forgot-password', authLimiter);
 app.use('/api/tools/devcpp/compile', authLimiter);
-// Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated), otherwise allow all
+// Configure CORS: allow origins via env `CORS_ORIGIN`; fallback to FRONTEND_URL + local dev URLs
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
+  : [
+      process.env.FRONTEND_URL || 'https://ai-student-hub.web.app',
+      'http://localhost:5174',
+      'http://localhost:5173',
+      'http://localhost:5000'
+    ];
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [ (process.env.FRONTEND_URL || 'http://localhost:3000') ],
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`Blocked CORS request from origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true
+};
+
+if (!process.env.CORS_ORIGIN) {
+  console.warn('CORS_ORIGIN not set; using FRONTEND_URL and localhost defaults');
 }
-if (!process.env.CORS_ORIGIN) console.warn('CORS_ORIGIN not set; restricting to FRONTEND_URL or localhost by default');
 app.use(cors(corsOptions));
 
 mongoose.connect(process.env.MONGO_URI)
@@ -60,6 +118,11 @@ if (!process.env.MONGO_URI) {
 if (!process.env.JWT_SECRET) {
   console.error('FATAL: JWT_SECRET is not set. Generate a strong secret and set JWT_SECRET in your .env.');
 }
+
+// Root health-check route
+app.get('/', (req, res) => {
+  res.send('Backend working');
+});
 
 // 🔗 API ROUTES - Define these BEFORE static files
 app.get("/api/docs", (req, res) => {
@@ -104,69 +167,20 @@ app.use("/api/users", userRoutes);
 app.use("/api/tools", toolRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use('/api/support', supportRoutes);
+// ✅ NEW: Auth routes (Google OAuth, etc.)
+app.use('/auth', (req, res, next) => {
+  console.log(`🛣️ Auth route match: ${req.method} ${req.originalUrl}`);
+  next();
+});
+app.use('/auth', authRoutes);
+// ✅ NEW: Gmail API routes
+app.use('/api/gmail', gmailRoutes);
 // Admin routes (stats / management)
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
 
-// ---- Google OAuth routes (stateless, issues JWT) ----
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || 
-      (process.env.BASE_URL ? process.env.BASE_URL + '/api/users/google/callback' : 'http://localhost:5000/api/users/google/callback')
-  }, async (accessToken, refreshToken, profile, done) => {
-    try {
-      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
-      if (!email) return done(new Error('No email from Google'));
-
-      const normalizedEmail = String(email).toLowerCase();
-      // Only allow Gmail addresses
-      if (!normalizedEmail.endsWith('@gmail.com')) {
-        return done(new Error('Google account must be a @gmail.com address'));
-      }
-
-      let user = await User.findOne({ googleId: profile.id });
-      if (!user) {
-        // If a user exists with same email, link accounts
-        user = await User.findOne({ email: normalizedEmail });
-      }
-
-      if (user) {
-        user.provider = 'google';
-        user.googleId = profile.id;
-        user.email = normalizedEmail;
-        await user.save();
-        return done(null, user);
-      }
-
-      const newUser = new User({
-        name: profile.displayName || 'Google User',
-        email: normalizedEmail,
-        provider: 'google',
-        googleId: profile.id
-      });
-      await newUser.save();
-      return done(null, newUser);
-    } catch (err) {
-      done(err);
-    }
-  }));
-
-  app.get('/api/users/google', passport.authenticate('google', { scope: ['profile','email'] }));
-
-  app.get('/api/users/google/callback', passport.authenticate('google', { session: false, failureRedirect: (process.env.FRONTEND_URL || '/') + '?auth=failed' }), (req, res) => {
-    // Issue JWT and redirect to frontend with token
-    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
-    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    const redirectTo = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = new URL(redirectTo);
-    url.searchParams.set('token', token);
-    return res.redirect(url.toString());
-  });
-} else {
-  console.warn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env to enable.');
-}
+// Keep Google OAuth in routes/authRoutes.js instead of redefining here.
+// This avoids path conflicts and ensures /auth/google exists.
 
 // Serve static files AFTER API routes
 app.use(express.static(path.join(__dirname, "public")));
@@ -182,7 +196,7 @@ app.use('/api', (req, res) => {
 // Serve SPA index.html for all other GET requests (allow client-side routing)
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
-  if (req.path.startsWith('/api')) return next();
+  if (req.path.startsWith('/api') || req.path.startsWith('/auth')) return next();
   // If the client accepts HTML, serve the SPA with no-cache headers
   if (req.accepts && req.accepts('html')) {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');

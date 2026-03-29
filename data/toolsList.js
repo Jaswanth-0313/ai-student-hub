@@ -3,7 +3,7 @@ module.exports = [
   {
     name: 'ChatGPT',
     key: 'chatgpt',
-    logo: '/assets/tools/chatgpt.svg',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg',
     description: 'Content generation & explanations',
     website: 'https://chat.openai.com',
     features: ['Conversational AI', 'Text generation', 'Summaries', 'Code assistance'],
@@ -13,7 +13,7 @@ module.exports = [
   {
     name: 'Lovable',
     key: 'lovable',
-    logo: '/assets/tools/lovable.svg',
+    logo: 'https://cdn-icons-png.flaticon.com/512/1077/1077035.png',
     description: 'AI-powered app development',
     website: 'https://lovable.dev',
     features: ['Scaffold apps', 'AI code suggestions'],
@@ -23,7 +23,7 @@ module.exports = [
   {
     name: 'Gamma',
     key: 'gamma',
-    logo: '/assets/tools/gamma.svg',
+    logo: '/src/assets/logos/gamma.png',
     description: 'Presentation creation',
     website: 'https://gamma.app',
     features: ['Auto-slide generation', 'Design templates'],
@@ -33,7 +33,7 @@ module.exports = [
   {
     name: 'Figma',
     key: 'figma',
-    logo: '/assets/tools/figma.svg',
+    logo: 'https://cdn.simpleicons.org/figma',
     description: 'UI/UX design',
     website: 'https://figma.com',
     features: ['Design prototypes', 'Collaboration', 'Plugins'],
@@ -43,7 +43,7 @@ module.exports = [
   {
     name: 'Canva',
     key: 'canva',
-    logo: '/assets/tools/canva.svg',
+    logo: '/src/assets/logos/canva.png',
     description: 'Graphic design',
     website: 'https://canva.com',
     features: ['Templates', 'Drag & drop editor', 'Export assets'],
@@ -53,7 +53,7 @@ module.exports = [
   {
     name: 'GitHub',
     key: 'github',
-    logo: '/assets/tools/github.svg',
+    logo: 'https://cdn.simpleicons.org/github',
     description: 'Code collaboration',
     website: 'https://github.com',
     features: ['Repositories', 'PRs', 'Actions'],
@@ -63,7 +63,7 @@ module.exports = [
   {
     name: 'LeetCode',
     key: 'leetcode',
-    logo: '/assets/tools/leetcode.svg',
+    logo: 'https://cdn.simpleicons.org/leetcode',
     description: 'Coding practice',
     website: 'https://leetcode.com',
     features: ['Problems', 'Discuss', 'Contests'],
@@ -73,7 +73,7 @@ module.exports = [
   {
     name: 'Notebook LM',
     key: 'notebooklm',
-    logo: '/assets/tools/notebooklm.svg',
+    logo: '/src/assets/logos/notebooklm.png',
     description: 'AI research and note-taking',
     website: 'https://notebooklm.google.com',
     features: ['Note summarization', 'Document-assisted research'],
@@ -81,13 +81,23 @@ module.exports = [
     howTo: 'Use your Google API token or OAuth to connect Notebook LM.'
   },
   {
-    name: 'DevC++',
+    name: 'DevC++ v5.11',
     key: 'devcpp',
-    logo: '/assets/tools/devcpp.svg',
-    description: 'Classic C++ IDE for quick practice',
-    website: 'https://orwelldevcpp.blogspot.com/',
-    features: ['Lightweight IDE', 'Quick compilation'],
-    useCases: ['Practice C++ locally', 'Test snippets quickly'],
-    howTo: 'DevC++ does not require credentials; use the Visit button to download or open it.'
+    logo: 'https://cdn-icons-png.flaticon.com/512/6132/6132222.png',
+    description: 'DevC++ v5.11 is used by students for C and C++ programming practice',
+    website: 'https://sourceforge.net/projects/orwelldevcpp/',
+    features: ['Lightweight IDE', 'Quick compilation', 'C/C++ learning'],
+    useCases: ['Practice C++ problems', 'Learn C/C++ programming', 'Test code snippets'],
+    howTo: 'Use the DevC++ connection in Tools and open the official download/reference site using the Open button.'
+  },
+  {
+    name: 'Gmail',
+    key: 'gmail',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Gmail_Icon.png',
+    description: 'Gmail is automatically connected via your user account',
+    website: 'https://mail.google.com',
+    features: ['Email access', 'Notifications', 'Inbox management'],
+    useCases: ['Open Gmail directly', 'Send emails', 'Track assignments'],
+    howTo: 'Gmail is automatically connected using your login email. Just click Open Gmail.'
   }
 ];
