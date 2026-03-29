@@ -51,15 +51,41 @@ export function AuthProvider({ children }) {
     return () => unsubscribe()
   }, [navigate])
 
-  const login = async (token, userData) => {
+  const login = (tokenOrUser, userData) => {
+    // Handle both signatures:
+    // 1. login(userObject) - from Firebase auth
+    // 2. login(token, userObject) - from backend
+    
+    let token = null
+    let user = null
+
+    if (typeof tokenOrUser === 'string') {
+      // First param is token
+      token = tokenOrUser
+      user = userData
+    } else {
+      // First param is user object (Firebase auth)
+      user = tokenOrUser
+    }
+
     if (token) {
       setToken(token)
       setAuthToken(token)
       localStorage.setItem('token', token)
     }
-    if (userData) {
-      setUser(userData)
+    
+    if (user) {
+      // Ensure user object has necessary properties
+      const userObj = {
+        id: user.id || user.uid || user._id,
+        uid: user.uid || user.id,
+        name: user.name || user.displayName || 'Student',
+        email: user.email,
+        provider: user.provider || 'firebase'
+      }
+      setUser(userObj)
     }
+    
     setLoading(false)
   }
 

@@ -66,8 +66,10 @@ export default function Signup() {
           setAuthToken(syncRes.data.token);
         }
 
-        // 4. Update Global Context with Backend Data (contains official name)
-        if (syncRes.data.user) {
+        // 4. Update Global Context with Backend Data and Token
+        if (syncRes.data.user && syncRes.data.token) {
+          login(syncRes.data.token, syncRes.data.user);
+        } else if (syncRes.data.user) {
           login(syncRes.data.user);
         }
 
@@ -110,7 +112,13 @@ export default function Signup() {
           provider: 'google'
         });
 
-        if (syncRes.data.user) {
+        if (syncRes.data.token) {
+          setAuthToken(syncRes.data.token);
+        }
+
+        if (syncRes.data.user && syncRes.data.token) {
+          login(syncRes.data.token, syncRes.data.user);
+        } else if (syncRes.data.user) {
           login(syncRes.data.user);
         }
       } catch (syncErr) {

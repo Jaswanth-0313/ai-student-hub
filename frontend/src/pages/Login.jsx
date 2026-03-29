@@ -38,6 +38,7 @@ export default function Login() {
       const firebaseUser = userCredential.user;
       firebaseUser.id = firebaseUser.uid;
 
+      // Set initial Firebase user
       login(firebaseUser)
 
       // Sync with Backend
@@ -54,8 +55,10 @@ export default function Login() {
           setAuthToken(syncRes.data.token);
         }
 
-        // Update context with backend user data (includes name)
-        if (syncRes.data.user) {
+        // Update context with backend user data and token
+        if (syncRes.data.user && syncRes.data.token) {
+          login(syncRes.data.token, syncRes.data.user);
+        } else if (syncRes.data.user) {
           login(syncRes.data.user);
         }
 
@@ -100,7 +103,13 @@ export default function Login() {
           provider: 'google'
         });
 
-        if (syncRes.data.user) {
+        if (syncRes.data.token) {
+          setAuthToken(syncRes.data.token);
+        }
+
+        if (syncRes.data.user && syncRes.data.token) {
+          login(syncRes.data.token, syncRes.data.user);
+        } else if (syncRes.data.user) {
           login(syncRes.data.user);
         }
       } catch (syncErr) {
