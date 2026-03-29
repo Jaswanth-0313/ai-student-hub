@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const userRoutes = require("./routes/UserRoutes");
 const toolRoutes = require("./routes/toolsRoutes");
@@ -21,7 +22,12 @@ const helmet = require('helmet');
 const compression = require('compression');
 
 const app = express();   // ⭐ CREATE APP FIRST
+const PORT = process.env.PORT || 5000;
 
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+<<<<<<< HEAD
 // Global crash safety
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
@@ -31,8 +37,21 @@ process.on('unhandledRejection', (reason) => {
 });
 
 app.use(express.json());
+=======
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
 // Security middlewares
-app.use(helmet());
+// Security middlewares with relaxed CSP for Firebase
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "img-src": ["'self'", "data:", "https://www.gstatic.com", "https://*.googleapis.com"],
+      "connect-src": ["'self'", "https://*.googleapis.com", "https://*.firebaseio.com", "https://*.firebaseapp.com"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://www.gstatic.com", "https://apis.google.com"],
+      "frame-src": ["'self'", "https://*.firebaseapp.com"]
+    },
+  },
+}));
 app.use(compression());
 
 // ✅ EXPRESS SESSION - Required for Passport OAuth
@@ -78,6 +97,7 @@ app.use('/api/users/login', authLimiter);
 app.use('/api/users/create', authLimiter);
 app.use('/api/users/forgot-password', authLimiter);
 app.use('/api/tools/devcpp/compile', authLimiter);
+<<<<<<< HEAD
 // Configure CORS: allow origins via env `CORS_ORIGIN`; fallback to FRONTEND_URL + local dev URLs
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
@@ -97,19 +117,60 @@ const corsOptions = {
     }
     console.warn(`Blocked CORS request from origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
+=======
+// Configure CORS: allow origins via env `CORS_ORIGIN` (comma-separated)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  'http://127.0.0.1:5173',
+  process.env.FRONTEND_URL,
+  'https://ai-student-hub-cwql.onrender.com'
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
   },
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true
 };
 
+<<<<<<< HEAD
 if (!process.env.CORS_ORIGIN) {
   console.warn('CORS_ORIGIN not set; using FRONTEND_URL and localhost defaults');
 }
+=======
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
 app.use(cors(corsOptions));
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected ✅"))
-  .catch(err => console.log("MongoDB Connection Failed: ", err));
+console.log("⏳ Connecting to MongoDB...");
+mongoose.connect(process.env.MONGO_URI, {
+  dbName: "ai_student_hub"
+})
+  .then(() => {
+    console.log("✅ MongoDB connected successfully to: " + mongoose.connection.name);
+
+    // Start server ONLY after DB is ready
+    app.listen(PORT, () => {
+      console.log("🚀 AI Student Hub Server started on port " + PORT);
+      console.log("📖 API Documentation: http://localhost:" + PORT + "/api/docs");
+      console.log("🌐 Frontend: http://localhost:" + PORT);
+    });
+
+    // Ensure admin account is present
+    ensureAdmin();
+  })
+  .catch(err => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1); // Stop if DB fails
+  });
 
 // Warn when critical environment variables are missing
 if (!process.env.MONGO_URI) {
@@ -164,6 +225,7 @@ app.get("/api/docs", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
+
 app.use("/api/tools", toolRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use('/api/support', supportRoutes);
@@ -179,39 +241,149 @@ app.use('/api/gmail', gmailRoutes);
 const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/admin', adminRoutes);
 
+<<<<<<< HEAD
 // Keep Google OAuth in routes/authRoutes.js instead of redefining here.
 // This avoids path conflicts and ensures /auth/google exists.
-
-// Serve static files AFTER API routes
-app.use(express.static(path.join(__dirname, "public")));
-
-// If request starts with /api and hasn't matched any route, return JSON 404
-app.use('/api', (req, res) => {
-  return res.status(404).json({
-    message: 'Endpoint not found',
-    availableEndpoints: 'GET /api/docs'
+=======
+// Health Check for Production Debugging
+app.get("/api/health", (req, res) => {
+  const fs = require('fs');
+  const healthDistPath = path.resolve(__dirname, "frontend", "dist");
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    __dirname,
+    env: process.env.NODE_ENV,
+    filesystem: {
+      rootFiles: fs.readdirSync(__dirname).filter(f => !f.startsWith('.')),
+      distExists: fs.existsSync(healthDistPath),
+      indexExists: fs.existsSync(path.join(healthDistPath, "index.html"))
+    }
   });
 });
 
-// Serve SPA index.html for all other GET requests (allow client-side routing)
+// ---- Google OAuth routes (stateless, issues JWT) ----
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || (process.env.BASE_URL ? `${process.env.BASE_URL}/api/users/google/callback` : "http://localhost:5000/api/users/google/callback")
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+      if (!email) return done(new Error('No email from Google'));
+
+      const normalizedEmail = String(email).toLowerCase();
+      // Only allow Gmail addresses
+      if (!normalizedEmail.endsWith('@gmail.com')) {
+        return done(new Error('Google account must be a @gmail.com address'));
+      }
+
+      let user = await User.findOne({ googleId: profile.id });
+      if (!user) {
+        // If a user exists with same email, link accounts
+        user = await User.findOne({ email: normalizedEmail });
+      }
+
+      if (user) {
+        user.provider = 'google';
+        user.googleId = profile.id;
+        user.email = normalizedEmail;
+        await user.save();
+        return done(null, user);
+      }
+
+      const newUser = new User({
+        name: profile.displayName || 'Google User',
+        email: normalizedEmail,
+        provider: 'google',
+        googleId: profile.id
+      });
+      await newUser.save();
+      return done(null, newUser);
+    } catch (err) {
+      done(err);
+    }
+  }));
+
+  app.get('/api/users/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+  app.get('/api/users/google/callback', passport.authenticate('google', { session: false, failureRedirect: (process.env.FRONTEND_URL || '/') + '?auth=failed' }), (req, res) => {
+    // Issue JWT and redirect to frontend with token
+    if (!process.env.JWT_SECRET) return res.status(500).json({ message: 'JWT_SECRET not configured on server' });
+    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const redirectTo = process.env.FRONTEND_URL || 'http://localhost:5173';
+    try {
+      const url = new URL(redirectTo);
+      url.searchParams.set('token', token);
+      return res.redirect(url.toString());
+    } catch (e) {
+      console.error("Invalid FRONTEND_URL during redirect:", redirectTo);
+      return res.redirect(`/?token=${token}`);
+    }
+  });
+} else {
+  console.warn('Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env to enable.');
+}
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
+
+// Serve static files AFTER API routes
+const publicPath = path.join(__dirname, 'public');
+const distPath = path.join(__dirname, 'frontend', 'dist');
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
+app.use(express.static(publicPath));
+
+// API 404 handler - important to keep this before the SPA fallback
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+    docs: '/api/docs'
+  });
+});
+
+// SPA Fallback: Must be the last route.
+// app.use() is used here for Express 5 compatibility (app.get("*") is invalid in Express 5).
+// Only serve index.html for GET requests; API 404s handled above.
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
+<<<<<<< HEAD
   if (req.path.startsWith('/api') || req.path.startsWith('/auth')) return next();
   // If the client accepts HTML, serve the SPA with no-cache headers
   if (req.accepts && req.accepts('html')) {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+=======
+  if (req.path.startsWith('/api')) return next();
+
+  const candidateIndex = fs.existsSync(path.join(distPath, 'index.html'))
+    ? path.join(distPath, 'index.html')
+    : path.join(publicPath, 'index.html');
+
+  if (!fs.existsSync(candidateIndex)) {
+    console.error(`❌ CRITICAL: Frontend build not found. Checked dist: ${distPath}, public: ${publicPath}`);
+    return res.status(500).send(`
+      <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+        <h1 style="color: #e11d48;">Frontend Not Found</h1>
+        <p>The server is running but the frontend build is missing.</p>
+      </div>
+    `);
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
   }
-  next();
+
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(candidateIndex);
 });
 
-const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log("🚀 AI Student Hub Server started on port " + PORT);
-  console.log("📖 API Documentation: http://localhost:" + PORT + "/api/docs");
-  console.log("🌐 Frontend: http://localhost:" + PORT);
-});
+
+
+
+
+// PORT is declared at the top of the file
 
 // Ensure admin account is present/rotated on startup (if env vars provided)
 const bcrypt = require('bcryptjs');
@@ -232,5 +404,5 @@ async function ensureAdmin() {
 }
 
 mongooseConn.once('open', () => {
-  ensureAdmin();
+  // ensureAdmin(); // Handled in .then()
 });

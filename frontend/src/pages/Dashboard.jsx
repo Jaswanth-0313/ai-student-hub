@@ -86,7 +86,7 @@ export default function Dashboard() {
           </div>
           <div>
             <h1 className="text-4xl font-bold text-white flex items-center gap-3">
-              Welcome back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{user?.name?.split(' ')[0] || 'Student'}</span>
+              Welcome back, <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{user?.name || ''}</span>
               <span className="inline-block animate-bounce origin-bottom">👋</span>
             </h1>
             <p className="mt-1 text-gray-400">Here's your study hub overview for today.</p>

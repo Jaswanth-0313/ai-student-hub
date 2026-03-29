@@ -1,8 +1,11 @@
 import React, { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
-import api, { setAuthToken, authAPI } from '../services/api'
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from '../firebase'
 import { AuthContext } from '../context/AuthContext'
+import { authAPI, setAuthToken } from '../services/api'
+import { useSession } from '../context/SessionContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 
@@ -13,6 +16,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { login } = useContext(AuthContext)
+  const { initFirebaseSession } = useSession()
 
   const submit = async (e) => {
     e.preventDefault()
@@ -27,20 +31,87 @@ export default function Login() {
     }
 
     try {
-      const res = await authAPI.login({ email, password })
-      const { token, user } = res.data
+      console.log("🚀 Starting Login process for:", email);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      console.log("✅ Firebase Login Success:", userCredential.user.uid);
 
-      if (!token || !user) {
-        throw new Error('Invalid server response')
+      const firebaseUser = userCredential.user;
+      firebaseUser.id = firebaseUser.uid;
+
+      login(firebaseUser)
+
+      // Sync with Backend
+      try {
+        console.log("🔹 Syncing with backend MongoDB...");
+        const syncRes = await authAPI.syncFirebaseUser({
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || '',
+          provider: 'firebase'
+        });
+
+        if (syncRes.data.token) {
+          setAuthToken(syncRes.data.token);
+        }
+
+        // Update context with backend user data (includes name)
+        if (syncRes.data.user) {
+          login(syncRes.data.user);
+        }
+
+        console.log("✅ Backend Sync Success");
+      } catch (syncErr) {
+        console.error("❌ Backend Sync Failed:", syncErr);
       }
 
-      setAuthToken(token)
-      login(token, user)
+      console.log("✅ Login Firebase success- now navigating to home");
+
+      console.log("🎉 Login Complete! Navigating...");
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Login failed')
+      console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
+      console.error("❌ LOGIN ERROR STACK:", err);
+      let msg = err.message;
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') msg = 'Invalid email or password';
+      setError(msg || 'Login failed')
     } finally {
+      console.log("🏁 Login process finished");
       setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError(null)
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      const firebaseUser = result.user
+      firebaseUser.id = firebaseUser.uid
+
+      login(firebaseUser)
+
+      // Sync Google User with Backend
+      try {
+        console.log("🔹 Syncing Google User with backend... Name:", firebaseUser.displayName);
+        const syncRes = await authAPI.syncFirebaseUser({
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          provider: 'google'
+        });
+
+        if (syncRes.data.user) {
+          login(syncRes.data.user);
+        }
+      } catch (syncErr) {
+        console.error("❌ Google Sync Failed:", syncErr);
+      }
+
+      await initFirebaseSession(firebaseUser)
+      navigate('/dashboard')
+    } catch (err) {
+      console.error("Google Login Error:", err)
+      setError(err.message || 'Google Login failed')
     }
   }
 
@@ -124,13 +195,19 @@ export default function Login() {
             </div>
           </div>
 
+<<<<<<< HEAD
           <a
             href={`${import.meta.env.VITE_API_BASE || 'http://localhost:5000'}/auth/google`}
+=======
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
             className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
           >
             <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
-            Sign in with Google
-          </a>
+            Continue with Google
+          </button>
         </form>
       </Card>
 

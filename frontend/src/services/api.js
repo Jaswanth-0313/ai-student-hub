@@ -1,5 +1,6 @@
 import axios from 'axios'
 
+<<<<<<< HEAD
 const VITE_API_BASE = import.meta.env.VITE_API_BASE
 
 const API_BASE = VITE_API_BASE || (
@@ -13,6 +14,15 @@ const isDevelopment = import.meta.env.DEV
 if (!isDevelopment && !VITE_API_BASE) {
   console.warn('⚠️ VITE_API_BASE is not set. Using default production API base:', API_BASE);
 }
+=======
+// Determine API base URL
+// Priority:
+// 1. `import.meta.env.VITE_API_BASE` (set at build time)
+// 2. At runtime, use current origin + '/api' (for static builds served from same host)
+// 3. Fallback to localhost for local development
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : (import.meta.env.VITE_API_BASE || '/api')
+const isDevelopment = import.meta.env.DEV
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
 
 // Log API configuration
 if (isDevelopment) {
@@ -67,11 +77,12 @@ export function setAuthToken(token) {
   }
 }
 
-// helper API methods
 export const authAPI = {
-  register: (data) => api.post('/users/create', data),
-  login: (data) => api.post('/users/login', data)
-}
+  syncFirebaseUser: async (userData) => {
+    // Send Firebase user details to backend for MongoDB sync
+    return api.post('/users/firebase', userData);
+  }
+};
 
 export const dashboardAPI = {
   getDashboard: () => api.get('/dashboard'),

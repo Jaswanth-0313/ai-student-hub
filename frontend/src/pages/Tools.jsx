@@ -192,7 +192,17 @@ export default function Tools() {
                     <Button
                       variant="primary"
                       className="flex-1 gap-2 text-xs h-9"
+<<<<<<< HEAD
                       onClick={() => openToolWindow(tool.key, tool.url)}
+=======
+                      onClick={() => {
+                        const win = window.open(toolInfo.url, '_blank');
+                        if (win) {
+                          if (!window.externalTabs) window.externalTabs = [];
+                          window.externalTabs.push(win);
+                        }
+                      }}
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
                     >
                       Open
                     </Button>

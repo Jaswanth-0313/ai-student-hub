@@ -8,16 +8,14 @@ node_modules/
 
 # Production
 /build
-/dist
-frontend/dist
+# frontend/dist is committed so Render can serve it without a build step
+# /dist (root-level dist, if any)
 
 # Misc
 .DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
+
 
 npm-debug.log*
 yarn-debug.log*
@@ -48,3 +46,9 @@ yarn-integrity
 
 # Mac files
 .DS_Store
+
+# Temporary files (local only)
+temp_backup/
+build_log.txt
+build_detailed_log.txt
+*.log

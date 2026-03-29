@@ -1,12 +1,17 @@
 import React, { createContext, useState, useEffect } from 'react'
+<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom'
 import api, { setAuthToken } from '../services/api'
+=======
+import { auth } from '../firebase'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
 
 export const AuthContext = createContext()
 
-export function AuthProvider({ children }){
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+<<<<<<< HEAD
   const [loading, setLoading] = useState(!!token)
   const navigate = useNavigate()
 
@@ -40,24 +45,25 @@ export function AuthProvider({ children }){
         // Redirect to dashboard after OAuth login
         navigate('/dashboard', { replace: true })
         return
-      }
-    } catch (e) {}
+=======
+  const [loading, setLoading] = useState(true)
 
-    if (token){
-      setAuthToken(token)
-      // fetch basic dashboard to get user info
-      api.get('/dashboard')
-        .then(res => {
-          setUser(res.data.user)
-        })
-        .catch(()=>{
-          setToken(null)
-          localStorage.removeItem('token')
-          setAuthToken(null)
-        })
-        .finally(()=>setLoading(false))
-    } else {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Normalize: preferred name > displayName > email prefix
+        const userObj = {
+          ...firebaseUser,
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || ''
+        };
+        setUser(userObj)
+      } else {
+        setUser(null)
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
+      }
       setLoading(false)
+<<<<<<< HEAD
     }
   },[token, navigate])
 
@@ -72,18 +78,35 @@ export function AuthProvider({ children }){
       await api.post('/tools/connect/gmail', { credential: 'oauth' })
     } catch (err) {
       console.warn('Gmail auto-connect attempt failed (non-blocking)', err.message)
+=======
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const login = (userData) => {
+    if (userData) {
+      // Merge: STRONGLY favor data from backend sync if it exists (contains 'name')
+      setUser(prev => ({
+        ...prev,
+        ...userData,
+        id: userData.uid || userData.firebaseUID || prev?.id,
+        name: userData.name || userData.displayName || prev?.name || ''
+      }));
+>>>>>>> 70f6487315ffb4abfc0e2702cd18e56bbd3189d9
     }
   }
 
-  const logout = () => {
-    setToken(null)
-    setUser(null)
-    setAuthToken(null)
-    localStorage.removeItem('token')
+  const logout = async (broadcast = true) => {
+    if (broadcast) {
+      window.dispatchEvent(new Event('manual_logout'));
+    }
+    await signOut(auth);
+    setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ token: user?.uid, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
