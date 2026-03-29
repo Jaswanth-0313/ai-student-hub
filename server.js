@@ -108,6 +108,45 @@ app.use("/auth", authRoutes);
 app.use("/api/gmail", gmailRoutes);
 app.use("/api/admin", adminRoutes);
 
+// ================= API DOCS =================
+app.get('/api/docs', (req, res) => {
+  res.json({
+    title: "AI Student Hub API Documentation",
+    version: "1.0.0",
+    description: "A unified ecosystem for students to access AI tools",
+    baseURL: process.env.BASE_URL || `http://localhost:${PORT}`,
+    endpoints: {
+      authentication: {
+        "POST /api/users/create": "Register new user",
+        "POST /api/users/login": "Login user (returns JWT token)",
+        "GET /api/users": "Get all users (admin only)",
+        "GET /api/users/:id": "Get user by ID"
+      },
+      tools: {
+        "POST /api/tools/connect/:toolName": "Connect a tool",
+        "POST /api/tools/disconnect/:toolName": "Disconnect a tool",
+        "GET /api/tools/mytools": "Get user's connected tools",
+        "GET /api/tools/redirect/:toolName": "Redirect to tool",
+        "POST /api/tools/recommend": "Get smart recommendations"
+      },
+      dashboard: {
+        "GET /api/dashboard": "Get user dashboard",
+        "GET /api/dashboard/resources": "Get learning resources",
+        "POST /api/dashboard/search": "Search tools and content"
+      }
+    },
+    supportedTools: [
+      "chatGPT - Content generation & explanations",
+      "gamma - Presentation creation",
+      "figma - UI/UX design",
+      "lovable - App development",
+      "canva - Graphic design",
+      "github - Code collaboration",
+      "leetcode - Coding practice"
+    ]
+  });
+});
+
 // ================= ROOT =================
 app.get("/", (req, res) => {
   res.send("Backend working 🚀");

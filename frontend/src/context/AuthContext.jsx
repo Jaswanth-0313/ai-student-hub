@@ -8,13 +8,28 @@ export const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
     const localToken = localStorage.getItem('token')
     if (localToken) {
+      setToken(localToken)
       setAuthToken(localToken)
+    }
+
+    // Handle OAuth redirect token
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      localStorage.setItem('token', urlToken);
+      setToken(urlToken)
+      setAuthToken(urlToken);
+      // Remove token from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      navigate('/dashboard');
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -34,10 +49,11 @@ export function AuthProvider({ children }) {
     })
 
     return () => unsubscribe()
-  }, [])
+  }, [navigate])
 
   const login = async (token, userData) => {
     if (token) {
+      setToken(token)
       setAuthToken(token)
       localStorage.setItem('token', token)
     }
@@ -51,12 +67,14 @@ export function AuthProvider({ children }) {
     if (broadcast) {
       window.dispatchEvent(new Event('manual_logout'));
     }
+    localStorage.removeItem('token')
+    setToken(null)
+    setUser(null)
     await signOut(auth);
-    setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ token: user?.uid, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
