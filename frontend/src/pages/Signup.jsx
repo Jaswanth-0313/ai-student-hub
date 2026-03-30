@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserPlus, Mail, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react'
 import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -16,8 +16,15 @@ export default function Signup() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { login } = useContext(AuthContext)
+  const { login, user: authUser } = useContext(AuthContext)
   const { initFirebaseSession } = useSession()
+
+  // If already logged in, redirect to dashboard
+  useEffect(() => {
+    if (authUser) {
+      navigate('/dashboard')
+    }
+  }, [authUser, navigate])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -28,9 +35,10 @@ export default function Signup() {
     const normalizedEmail = String(email).trim().toLowerCase()
     const passwordRegex = /^(?=.{8,}$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).*$/
 
-    if (!normalizedEmail.endsWith('@gmail.com')) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
       setLoading(false)
-      return setError('Please use a @gmail.com email for signup')
+      return setError('Please enter a valid email address')
     }
     if (!passwordRegex.test(password)) {
       setLoading(false)
@@ -59,7 +67,7 @@ export default function Signup() {
           firebaseUID: firebaseUser.uid,
           email: firebaseUser.email,
           name: name,
-          provider: 'local'
+          provider: 'password'
         });
 
         if (syncRes.data.token) {
@@ -128,8 +136,10 @@ export default function Signup() {
       await initFirebaseSession(firebaseUser)
       navigate('/dashboard')
     } catch (err) {
-      console.error("Google Login Error:", err)
-      setError(err.message || 'Google Login failed')
+      console.error("Google Signup Error:", err)
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Google Signup failed')
+      }
     }
   }
 

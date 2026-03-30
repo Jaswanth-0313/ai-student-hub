@@ -66,10 +66,15 @@ export function setAuthToken(token) {
 }
 
 export const authAPI = {
+  login: async (credentials) => api.post('/users/login', credentials),
+  signup: async (userData) => api.post('/users/create', userData),
   syncFirebaseUser: async (userData) => {
     // Send Firebase user details to backend for MongoDB sync
     return api.post('/users/firebase', userData);
-  }
+  },
+  forgotPassword: async (email) => api.post('/users/forgot-password', { email }),
+  resetPassword: async (email, newPassword) => api.post('/users/reset-password', { email, newPassword }),
+  verifyResetToken: async (token) => api.post('/users/verify-reset-token', { token })
 };
 
 export const dashboardAPI = {

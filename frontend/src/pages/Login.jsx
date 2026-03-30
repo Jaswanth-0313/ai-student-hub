@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -15,8 +15,15 @@ export default function Login() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { login } = useContext(AuthContext)
+  const { login, user: authUser, getLoginProvider } = useContext(AuthContext)
   const { initFirebaseSession } = useSession()
+
+  // If already logged in, redirect to dashboard
+  useEffect(() => {
+    if (authUser) {
+      navigate('/dashboard')
+    }
+  }, [authUser, navigate])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -25,14 +32,14 @@ export default function Login() {
 
     // Basic client-side validation
     const normalizedEmail = String(email).trim().toLowerCase()
-    if (!normalizedEmail.endsWith('@gmail.com')) {
+    if (!normalizedEmail || !password) {
       setLoading(false)
-      return setError('Please use a @gmail.com email address')
+      return setError('Email and password are required')
     }
 
     try {
-      console.log("🚀 Starting Login process for:", email);
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      console.log("🚀 Starting Login process for:", normalizedEmail);
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
       console.log("✅ Firebase Login Success:", userCredential.user.uid);
 
       const firebaseUser = userCredential.user;
@@ -48,7 +55,7 @@ export default function Login() {
           firebaseUID: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName || '',
-          provider: 'firebase'
+          provider: 'password'
         });
 
         if (syncRes.data.token) {
@@ -74,9 +81,36 @@ export default function Login() {
     } catch (err) {
       console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
       console.error("❌ LOGIN ERROR STACK:", err);
-      let msg = err.message;
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') msg = 'Invalid email or password';
-      setError(msg || 'Login failed')
+
+      let msg = err.message || 'Login failed';
+      
+      // ✅ Check if this is a Google-only account
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        // User might be a Google-only account
+        const googleOnlyMsg = 'This account uses Google login. Please continue with Google instead.';
+        
+        // Try to fetch from backend to check provider
+        try {
+          const res = await authAPI.login({ email: normalizedEmail, password });
+          if (res.data.token) {
+            setAuthToken(res.data.token);
+            login(res.data.token, res.data.user);
+            navigate('/dashboard');
+            return;
+          }
+        } catch (backupErr) {
+          // Check if error message indicates Google provider
+          if (backupErr.response?.data?.message?.includes('Google')) {
+            msg = googleOnlyMsg;
+          } else {
+            msg = 'Invalid email or password';
+          }
+        }
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'Invalid email or password';
+      }
+
+      setError(msg);
     } finally {
       console.log("🏁 Login process finished");
       setLoading(false)
@@ -100,7 +134,7 @@ export default function Login() {
           firebaseUID: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName,
-          provider: 'google'
+          provider: 'google.com'
         });
 
         if (syncRes.data.token) {
@@ -120,7 +154,9 @@ export default function Login() {
       navigate('/dashboard')
     } catch (err) {
       console.error("Google Login Error:", err)
-      setError(err.message || 'Google Login failed')
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Google Login failed')
+      }
     }
   }
 
@@ -163,6 +199,9 @@ export default function Login() {
           <div className="space-y-2">
             <div className="flex justify-between items-center ml-1">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Password</label>
+              <Link to="/forgot-password" className="text-xs text-primary hover:underline font-semibold">
+                Forgot?
+              </Link>
             </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">

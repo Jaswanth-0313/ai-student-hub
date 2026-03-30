@@ -295,6 +295,109 @@ router.put('/update-profile', authMiddleware, async (req, res) => {
   }
 });
 
+// ✅ FORGOT PASSWORD - Request password reset token
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Check if user exists
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.status(200).json({ 
+        message: 'If this email is registered, you will receive a password reset email' 
+      });
+    }
+
+    // Check provider - if Google user, inform them
+    if (user.provider === 'google' || user.provider === 'google.com') {
+      return res.status(200).json({
+        message: 'This account uses Google login. Please use Google to reset your password.',
+        provider: 'google'
+      });
+    }
+
+    // Firebase authentication flow will handle the actual email
+    // This is mainly for confirming the user exists on backend
+    // Frontend will use Firebase's sendPasswordResetEmail directly
+
+    res.status(200).json({
+      message: 'Password reset email requested successfully',
+      email: normalizedEmail
+    });
+
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Error processing password reset request' });
+  }
+});
+
+// ✅ VERIFY PASSWORD RESET TOKEN (optional - if using custom reset flow)
+router.post('/verify-reset-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    // Firebase handles token verification, this is just for reference
+    res.status(200).json({ 
+      message: 'Using Firebase password reset. Validate tokens in Firebase Console.',
+      note: 'Password reset emails are sent by Firebase. User clicks link in email to reset.'
+    });
+
+  } catch (err) {
+    res.status(400).json({ message: 'Invalid or expired token' });
+  }
+});
+
+// ✅ RESET PASSWORD (after email confirmation)
+// This is called after user confirms via Firebase email link
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required' });
+    }
+
+    // Validate password strength
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ 
+        message: 'Weak password - must be 8+ chars, include uppercase, lowercase, number and special character' 
+      });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    // Find user
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ 
+      message: 'Password reset successfully. You can now log in with your new password.' 
+    });
+
+  } catch (err) {
+    console.error('Password reset error:', err);
+    res.status(500).json({ message: 'Error resetting password' });
+  }
+});
+
 // ✅ GET ALL USERS
 router.get("/", async (req, res) => {
   try {
