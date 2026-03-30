@@ -24,7 +24,19 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
-// Add request interceptor for logging
+// Store Firebase ID token for tool API calls
+let currentFirebaseIdToken = null
+
+export function setFirebaseIdToken(token) {
+  currentFirebaseIdToken = token
+  if (token) {
+    api.defaults.headers.common['X-Firebase-Token'] = token
+  } else {
+    delete api.defaults.headers.common['X-Firebase-Token']
+  }
+}
+
+// Add request interceptor for logging and token injection
 api.interceptors.request.use(
   (config) => {
     console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data || '')

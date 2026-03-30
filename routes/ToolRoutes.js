@@ -76,15 +76,17 @@ router.post("/disconnect/:toolName", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "No tools connected" });
     }
 
-    // Disable the tool
-    toolIntegration[toolName] = {
-      enabled: false
-    };
-
-    await toolIntegration.save();
+    // Completely remove the tool (delete apiKey, token, username)
+    toolIntegration[toolName] = undefined;
+    
+    // Also try using $unset to remove the field from the document
+    await ToolIntegration.updateOne(
+      { userId },
+      { $unset: { [toolName]: 1 } }
+    );
 
     res.status(200).json({
-      message: `${toolName} disconnected successfully`
+      message: `${toolName} disconnected successfully. Your stored credentials have been permanently removed.`
     });
 
   } catch (err) {
@@ -134,7 +136,40 @@ router.get("/mytools", authMiddleware, async (req, res) => {
   }
 });
 
-// 🚀 REDIRECT TO TOOL (Smart Navigation)
+// �️ DELETE TOOL (Alternative to POST disconnect)
+router.delete("/disconnect/:toolName", authMiddleware, async (req, res) => {
+  try {
+    const { toolName } = req.params;
+    const userId = req.userId;
+
+    const validTools = ["chatGPT", "gamma", "figma", "lovable", "canva", "github", "leetcode"];
+
+    if (!validTools.includes(toolName)) {
+      return res.status(400).json({ message: `Invalid tool: ${toolName}` });
+    }
+
+    let toolIntegration = await ToolIntegration.findOne({ userId });
+
+    if (!toolIntegration) {
+      return res.status(404).json({ message: "No tools connected" });
+    }
+
+    // Completely remove the tool (delete apiKey, token, username)
+    await ToolIntegration.updateOne(
+      { userId },
+      { $unset: { [toolName]: 1 } }
+    );
+
+    res.status(200).json({
+      message: `${toolName} disconnected successfully. Your stored credentials have been permanently removed.`
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// �🚀 REDIRECT TO TOOL (Smart Navigation)
 router.get("/redirect/:toolName", authMiddleware, async (req, res) => {
   try {
     const { toolName } = req.params;

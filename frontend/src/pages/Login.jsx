@@ -1,10 +1,17 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  GoogleAuthProvider, 
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  fetchSignInMethodsForEmail
+} from "firebase/auth";
 import { auth } from '../firebase'
 import { AuthContext } from '../context/AuthContext'
-import { authAPI, setAuthToken } from '../services/api'
+import { authAPI, setAuthToken, setFirebaseIdToken } from '../services/api'
 import { useSession } from '../context/SessionContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -14,9 +21,29 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const navigate = useNavigate()
-  const { login, user: authUser, getLoginProvider } = useContext(AuthContext)
+  const { login, user: authUser } = useContext(AuthContext)
   const { initFirebaseSession } = useSession()
+
+  // Check for Google redirect result on mount
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          console.log('✅ Google login redirect result:', result.user.email);
+          await syncGoogleUser(result.user);
+          navigate('/dashboard');
+        }
+      } catch (err) {
+        console.error('❌ Redirect result error:', err);
+        setError(err.message || 'Google login failed');
+      }
+    };
+    
+    handleRedirectResult();
+  }, []);
 
   // If already logged in, redirect to dashboard
   useEffect(() => {
@@ -25,12 +52,43 @@ export default function Login() {
     }
   }, [authUser, navigate])
 
+  const syncGoogleUser = async (firebaseUser) => {
+    try {
+      console.log("🔹 Syncing Google User with backend...");
+      // Get Firebase ID token for API calls
+      const idToken = await firebaseUser.getIdToken(true);
+      setFirebaseIdToken(idToken);
+      
+      const syncRes = await authAPI.syncFirebaseUser({
+        firebaseUID: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName,
+        provider: 'google.com'
+      });
+
+      if (syncRes.data.token) {
+        setAuthToken(syncRes.data.token);
+      }
+
+      if (syncRes.data.user && syncRes.data.token) {
+        login(syncRes.data.token, syncRes.data.user);
+      } else if (syncRes.data.user) {
+        login(syncRes.data.user);
+      }
+
+      await initFirebaseSession(firebaseUser);
+      console.log("✅ Google sync successful");
+    } catch (syncErr) {
+      console.error("❌ Google sync failed:", syncErr);
+      throw new Error('Failed to sync with backend');
+    }
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
-    // Basic client-side validation
     const normalizedEmail = String(email).trim().toLowerCase()
     if (!normalizedEmail || !password) {
       setLoading(false)
@@ -38,12 +96,28 @@ export default function Login() {
     }
 
     try {
-      console.log("🚀 Starting Login process for:", normalizedEmail);
+      // ✅ CHECK PROVIDER BEFORE LOGIN
+      console.log("🔍 Checking provider for:", normalizedEmail);
+      const methods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
+      console.log("📋 Sign-in methods for email:", methods);
+
+      // If user has Google as provider, block password login
+      if (methods.includes('google.com')) {
+        setLoading(false);
+        return setError('❌ This account uses Google login. Please continue with Google instead.');
+      }
+
+      // Proceed with password login
+      console.log("🚀 Starting password login for:", normalizedEmail);
       const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password)
       console.log("✅ Firebase Login Success:", userCredential.user.uid);
 
       const firebaseUser = userCredential.user;
       firebaseUser.id = firebaseUser.uid;
+
+      // Get Firebase ID token for API calls
+      const idToken = await firebaseUser.getIdToken(true);
+      setFirebaseIdToken(idToken);
 
       // Set initial Firebase user
       login(firebaseUser)
@@ -62,7 +136,6 @@ export default function Login() {
           setAuthToken(syncRes.data.token);
         }
 
-        // Update context with backend user data and token
         if (syncRes.data.user && syncRes.data.token) {
           login(syncRes.data.token, syncRes.data.user);
         } else if (syncRes.data.user) {
@@ -74,40 +147,16 @@ export default function Login() {
         console.error("❌ Backend Sync Failed:", syncErr);
       }
 
-      console.log("✅ Login Firebase success- now navigating to home");
-
       console.log("🎉 Login Complete! Navigating...");
       navigate('/dashboard')
     } catch (err) {
       console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
-      console.error("❌ LOGIN ERROR STACK:", err);
 
       let msg = err.message || 'Login failed';
-      
-      // ✅ Check if this is a Google-only account
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        // User might be a Google-only account
-        const googleOnlyMsg = 'This account uses Google login. Please continue with Google instead.';
-        
-        // Try to fetch from backend to check provider
-        try {
-          const res = await authAPI.login({ email: normalizedEmail, password });
-          if (res.data.token) {
-            setAuthToken(res.data.token);
-            login(res.data.token, res.data.user);
-            navigate('/dashboard');
-            return;
-          }
-        } catch (backupErr) {
-          // Check if error message indicates Google provider
-          if (backupErr.response?.data?.message?.includes('Google')) {
-            msg = googleOnlyMsg;
-          } else {
-            msg = 'Invalid email or password';
-          }
-        }
-      } else if (err.code === 'auth/user-not-found') {
         msg = 'Invalid email or password';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'User not found. Please sign up first.';
       }
 
       setError(msg);
@@ -120,43 +169,38 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     try {
       setError(null)
+      setGoogleLoading(true)
       const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth, provider)
-      const firebaseUser = result.user
-      firebaseUser.id = firebaseUser.uid
 
-      login(firebaseUser)
-
-      // Sync Google User with Backend
+      console.log("🚀 Attempting Google login with popup...");
       try {
-        console.log("🔹 Syncing Google User with backend... Name:", firebaseUser.displayName);
-        const syncRes = await authAPI.syncFirebaseUser({
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          provider: 'google.com'
-        });
+        // Try popup first (preferred)
+        const result = await signInWithPopup(auth, provider)
+        console.log("✅ Google popup login successful");
+        const firebaseUser = result.user
+        firebaseUser.id = firebaseUser.uid
 
-        if (syncRes.data.token) {
-          setAuthToken(syncRes.data.token);
+        login(firebaseUser)
+        await syncGoogleUser(firebaseUser)
+        navigate('/dashboard')
+      } catch (popupErr) {
+        // If popup is blocked, fallback to redirect
+        if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user') {
+          console.log("⚠️  Popup blocked or closed, falling back to redirect...");
+          await signInWithRedirect(auth, provider)
+          // User will be redirected and return will be handled by getRedirectResult
+        } else {
+          throw popupErr;
         }
-
-        if (syncRes.data.user && syncRes.data.token) {
-          login(syncRes.data.token, syncRes.data.user);
-        } else if (syncRes.data.user) {
-          login(syncRes.data.user);
-        }
-      } catch (syncErr) {
-        console.error("❌ Google Sync Failed:", syncErr);
       }
-
-      await initFirebaseSession(firebaseUser)
-      navigate('/dashboard')
     } catch (err) {
-      console.error("Google Login Error:", err)
+      console.error("❌ Google Login Error:", err)
+      // Don't show error for popup-closed by user
       if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message || 'Google Login failed')
       }
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -246,10 +290,20 @@ export default function Login() {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
+            disabled={googleLoading || loading}
+            className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
-            Continue with Google
+            {googleLoading ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Connecting...
+              </>
+            ) : (
+              <>
+                <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
+                Continue with Google
+              </>
+            )}
           </button>
         </form>
       </Card>
