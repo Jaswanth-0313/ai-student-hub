@@ -105,7 +105,7 @@ const TOOL_DETAILS = {
 }
 
 // Credential modal component
-function CredentialModal({ tool, onClose, onSubmit, isLoading }) {
+function CredentialModal({ tool, onClose, onSubmit, isLoading, error }) {
   const [credential, setCredential] = useState('')
   const [credentialError, setCredentialError] = useState('')
 
@@ -131,7 +131,12 @@ function CredentialModal({ tool, onClose, onSubmit, isLoading }) {
 
         {/* Content */}
         <div className="px-6 py-4 space-y-4">
-          {/* Resource Links */}
+          {/* Error display */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded px-3 py-2">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
           <div className="space-y-3">
             <p className="text-sm font-semibold text-white">Quick Access Links:</p>
             <div className="flex gap-2">
@@ -299,12 +304,17 @@ export default function Tools() {
 
   const handleConnectClick = (toolKey) => {
     const toolDetails = TOOL_DETAILS[toolKey] || {}
+    setError(null) // Clear previous errors when opening modal
+    // Set loading state before attempting connection
+    setConnecting(toolKey)
+    
     // For tools that don't require credentials, connect directly
     if (toolDetails.credentialType === 'none') {
       handleConnectSubmit(toolKey, '')
     } else {
       // Open modal for credential input
       setModalOpen(toolKey)
+      setConnecting(null) // Reset loading state since modal is open
     }
   }
 
@@ -324,6 +334,7 @@ export default function Tools() {
       setError(err.response?.data?.message || `Failed to connect ${toolKey}`)
     } finally {
       setModalLoading(false)
+      setConnecting(null)
     }
   }
 
@@ -437,6 +448,7 @@ export default function Tools() {
           onClose={() => setModalOpen(null)}
           onSubmit={(credential) => handleConnectSubmit(modalOpen, credential)}
           isLoading={modalLoading}
+          error={error}
         />
       )}
     </PageContainer>

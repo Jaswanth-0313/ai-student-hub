@@ -4,7 +4,6 @@ import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   fetchSignInMethodsForEmail
@@ -172,34 +171,14 @@ export default function Login() {
       setGoogleLoading(true)
       const provider = new GoogleAuthProvider()
 
-      console.log("🚀 Attempting Google login with popup...");
-      try {
-        // Try popup first (preferred)
-        const result = await signInWithPopup(auth, provider)
-        console.log("✅ Google popup login successful");
-        const firebaseUser = result.user
-        firebaseUser.id = firebaseUser.uid
-
-        login(firebaseUser)
-        await syncGoogleUser(firebaseUser)
-        navigate('/dashboard')
-      } catch (popupErr) {
-        // If popup is blocked, fallback to redirect
-        if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user') {
-          console.log("⚠️  Popup blocked or closed, falling back to redirect...");
-          await signInWithRedirect(auth, provider)
-          // User will be redirected and return will be handled by getRedirectResult
-        } else {
-          throw popupErr;
-        }
-      }
+      console.log("🚀 Starting Google login with redirect...");
+      // Use redirect only (more reliable than popup)
+      await signInWithRedirect(auth, provider)
+      // User will be redirected to Google, then back to app
+      // getRedirectResult on mount will handle the completion
     } catch (err) {
       console.error("❌ Google Login Error:", err)
-      // Don't show error for popup-closed by user
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || 'Google Login failed')
-      }
-    } finally {
+      setError(err.message || 'Google Login failed')
       setGoogleLoading(false)
     }
   }

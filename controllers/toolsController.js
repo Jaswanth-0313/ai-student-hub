@@ -96,11 +96,41 @@ async function connectTool(req, res) {
     const tool = toolsList.find(t => t.key === toolName);
     if (!tool) return res.status(400).json({ message: 'Invalid tool' });
 
-    // For LeetCode only username required
-    const validator = require('validator');
-    const payload = credential ? String(credential) : '';
-    const sanitizedPayload = validator.escape(payload);
+    // Define which tools require credentials
+    const toolsWithCredentials = {
+      chatgpt: { requiresCredential: true, label: 'API Key' },
+      lovable: { requiresCredential: true, label: 'Token' },
+      gamma: { requiresCredential: false, label: null },
+      figma: { requiresCredential: true, label: 'Token' },
+      canva: { requiresCredential: true, label: 'Token' },
+      github: { requiresCredential: true, label: 'Token' },
+      leetcode: { requiresCredential: true, label: 'Username' },
+      notebooklm: { requiresCredential: false, label: null },
+      devcpp: { requiresCredential: false, label: null },
+      gmail: { requiresCredential: false, label: null }
+    };
 
+    const toolConfig = toolsWithCredentials[toolName];
+    
+    // Validate credential requirement
+    if (toolConfig && toolConfig.requiresCredential && (!credential || credential.toString().trim() === '')) {
+      return res.status(400).json({ 
+        message: `${toolName} requires a ${toolConfig.label}. Please provide a valid credential.` 
+      });
+    }
+
+    // For tools that require credentials, ensure something is provided
+    const validator = require('validator');
+    const credentialToStore = credential ? String(credential).trim() : '';
+    
+    // Don't allow empty credentials for tools that require them
+    if (toolConfig && toolConfig.requiresCredential && credentialToStore === '') {
+      return res.status(400).json({ 
+        message: `${toolName} credential cannot be empty.`
+      });
+    }
+
+    const sanitizedPayload = validator.escape(credentialToStore);
     const encrypted = encrypt(String(sanitizedPayload));
 
     const update = {

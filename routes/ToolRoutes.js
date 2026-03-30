@@ -7,46 +7,67 @@ const authMiddleware = require("../middleware/authMiddleware");
 router.post("/connect/:toolName", authMiddleware, async (req, res) => {
   try {
     const { toolName } = req.params;
-    const { apiKey, token, username } = req.body;
+    const { credential } = req.body;
     const userId = req.userId;
 
-    // Valid tools list
-    const validTools = ["chatGPT", "gamma", "figma", "lovable", "canva", "github", "leetcode"];
+    // Valid tools list with credential requirements
+    const toolsWithCredentials = {
+      chatgpt: { requiresCredential: true, field: 'apiKey' },
+      lovable: { requiresCredential: true, field: 'token' },
+      gamma: { requiresCredential: false, field: null },
+      figma: { requiresCredential: true, field: 'token' },
+      canva: { requiresCredential: true, field: 'token' },
+      github: { requiresCredential: true, field: 'token' },
+      leetcode: { requiresCredential: true, field: 'username' },
+      notebooklm: { requiresCredential: false, field: null },
+      devcpp: { requiresCredential: false, field: null },
+      gmail: { requiresCredential: false, field: null }
+    };
 
-    if (!validTools.includes(toolName)) {
+    const toolConfig = toolsWithCredentials[toolName];
+    if (!toolConfig) {
       return res.status(400).json({ message: `Invalid tool: ${toolName}` });
+    }
+
+    // Validate credential requirement
+    if (toolConfig.requiresCredential && (!credential || credential.toString().trim() === '')) {
+      return res.status(400).json({ 
+        message: `${toolName} requires a credential. Please provide a valid ${toolConfig.field}.` 
+      });
     }
 
     // Find or create tool integration
     let toolIntegration = await ToolIntegration.findOne({ userId });
-
     if (!toolIntegration) {
       toolIntegration = new ToolIntegration({ userId });
     }
 
-    // Update the specific tool
-    if (toolName === "github") {
-      toolIntegration[toolName] = {
-        enabled: true,
-        token,
-        username,
-        connectedAt: new Date()
-      };
-    } else if (toolName === "leetcode") {
-      toolIntegration[toolName] = {
-        enabled: true,
-        username,
-        connectedAt: new Date()
-      };
-    } else {
-      toolIntegration[toolName] = {
-        enabled: true,
-        apiKey,
-        connectedAt: new Date()
-      };
+    // Store credential based on tool type
+    const toolData = {
+      enabled: true,
+      connectedAt: new Date()
+    };
+
+    // Store the credential with the appropriate field name
+    if (toolConfig.requiresCredential && credential) {
+      toolData[toolConfig.field] = credential;
+      if (toolConfig.field === 'apiKey') {
+        toolData.encrypted = true; // Mark as encrypted
+      }
     }
 
+    toolIntegration[toolName] = toolData;
     await toolIntegration.save();
+
+    res.status(200).json({
+      message: `${toolName} connected successfully`,
+      tool: toolIntegration[toolName]
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
     res.status(200).json({
       message: `${toolName} connected successfully`,
