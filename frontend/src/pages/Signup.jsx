@@ -13,6 +13,7 @@ export default function Signup() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -43,6 +44,10 @@ export default function Signup() {
     if (!passwordRegex.test(password)) {
       setLoading(false)
       return setError('Weak password - must be 8+ chars with upper, lower, number and special char')
+    }
+    if (password !== confirmPassword) {
+      setLoading(false)
+      return setError('Passwords do not match')
     }
 
     try {
@@ -176,6 +181,23 @@ export default function Signup() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 placeholder="8+ chars, upper, symbol"
+                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Confirm Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                <ShieldCheck size={16} />
+              </div>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                placeholder="Repeat your password"
                 className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm font-mono"
               />
             </div>
