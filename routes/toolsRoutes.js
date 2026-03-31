@@ -11,6 +11,7 @@ router.get('/details', toolsController.getToolDetails);
 router.get('/status', authMiddleware, toolsController.getConnectedTools);
 router.get('/connected', authMiddleware, toolsController.getConnectedTools);
 router.post('/connect/:toolName', authMiddleware, toolsController.connectTool);
+router.post('/execute/:toolName', authMiddleware, toolsController.executeToolAPI);
 router.delete('/disconnect/:toolName', authMiddleware, toolsController.disconnectTool);
 
 // Dev-C++ compile endpoint

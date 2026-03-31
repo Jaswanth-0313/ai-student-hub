@@ -19,7 +19,12 @@ const TOOL_DETAILS = {
     description: 'AI-powered content generation and explanations',
     apiKeyUrl: 'https://platform.openai.com/api-keys',
     credentialType: 'apiKey',
-    credentialLabel: 'OpenAI API Key'
+    credentialLabel: 'OpenAI API Key',
+    fields: [
+      { name: 'apiKey', label: 'API Key', type: 'password', required: true },
+      { name: 'endpoint', label: 'API Endpoint', type: 'text', required: false, placeholder: 'https://api.openai.com/v1' }
+    ],
+    canExecute: true
   },
   lovable: {
     name: 'Lovable',
@@ -28,7 +33,11 @@ const TOOL_DETAILS = {
     description: 'AI-powered app development',
     apiKeyUrl: 'https://lovable.dev/docs/api',
     credentialType: 'token',
-    credentialLabel: 'Lovable Token'
+    credentialLabel: 'Lovable Token',
+    fields: [
+      { name: 'token', label: 'Token', type: 'password', required: true }
+    ],
+    canExecute: false
   },
   gamma: {
     name: 'Gamma',
@@ -37,7 +46,9 @@ const TOOL_DETAILS = {
     description: 'Presentation creation',
     apiKeyUrl: 'https://gamma.app/login',
     credentialType: 'none',
-    credentialLabel: 'Login in browser'
+    credentialLabel: 'Login in browser',
+    fields: [],
+    canExecute: false
   },
   figma: {
     name: 'Figma',
@@ -46,7 +57,11 @@ const TOOL_DETAILS = {
     description: 'UI/UX design',
     apiKeyUrl: 'https://www.figma.com/developers/api#authentication',
     credentialType: 'token',
-    credentialLabel: 'Figma Personal Access Token'
+    credentialLabel: 'Figma Personal Access Token',
+    fields: [
+      { name: 'token', label: 'Personal Access Token', type: 'password', required: true }
+    ],
+    canExecute: true
   },
   canva: {
     name: 'Canva',
@@ -115,18 +130,29 @@ const TOOL_DETAILS = {
 
 // Credential modal component
 function CredentialModal({ tool, onClose, onSubmit, isLoading, error }) {
-  const [credential, setCredential] = useState('')
-  const [credentialError, setCredentialError] = useState('')
+  const [credentials, setCredentials] = useState({})
+  const [credentialErrors, setCredentialErrors] = useState({})
 
   const toolDetails = TOOL_DETAILS[tool] || {}
-  const requiresCredential = toolDetails.credentialType && toolDetails.credentialType !== 'none'
+  const requiresCredential = toolDetails.fields && toolDetails.fields.length > 0
+
+  const handleFieldChange = (fieldName, value) => {
+    setCredentials(prev => ({ ...prev, [fieldName]: value }))
+    setCredentialErrors(prev => ({ ...prev, [fieldName]: '' }))
+  }
 
   const handleSubmit = () => {
-    if (requiresCredential && !credential.trim()) {
-      setCredentialError(`${toolDetails.credentialLabel} is required`)
+    const errors = {}
+    toolDetails.fields?.forEach(field => {
+      if (field.required && !credentials[field.name]?.trim()) {
+        errors[field.name] = `${field.label} is required`
+      }
+    })
+    if (Object.keys(errors).length > 0) {
+      setCredentialErrors(errors)
       return
     }
-    onSubmit(credential)
+    onSubmit(credentials)
   }
 
   return (
@@ -180,7 +206,7 @@ function CredentialModal({ tool, onClose, onSubmit, isLoading, error }) {
               </label>
               <input
                 type={toolDetails.credentialType === 'apiKey' ? 'password' : 'text'}
-                value={credential}
+                value={credentials.apiKey || credential}
                 onChange={(e) => {
                   setCredential(e.target.value)
                   setCredentialError('')
@@ -251,8 +277,10 @@ export default function Tools() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [connecting, setConnecting] = useState(null)
-  const [modalOpen, setModalOpen] = useState(null)
-  const [modalLoading, setModalLoading] = useState(false)
+  const [executionModal, setExecutionModal] = useState(null)
+  const [executionParams, setExecutionParams] = useState({})
+  const [executionResult, setExecutionResult] = useState(null)
+  const [executing, setExecuting] = useState(false)
   const { token } = useContext(AuthContext)
 
   const handleOpenTool = (toolKey, toolUrl) => {
@@ -327,23 +355,15 @@ export default function Tools() {
     }
   }
 
-  const handleConnectSubmit = async (toolKey, credential) => {
+  const handleExecuteAPI = async (toolKey, params) => {
     try {
-      setModalLoading(true)
-      const payload = credential ? { credential } : {}
-      await api.post(`/tools/connect/${toolKey}`, payload)
-      await loadTools()
-      setModalOpen(null)
-      setError(null)
-      
-      // Show success message
-      const toolName = TOOL_DETAILS[toolKey]?.name || toolKey
-      console.log(`✅ ${toolName} connected! Your API key is securely stored.`)
+      setExecuting(true)
+      const res = await api.post(`/tools/execute/${toolKey}`, { params })
+      setExecutionResult(res.data)
     } catch (err) {
-      setError(err.response?.data?.message || `Failed to connect ${toolKey}`)
+      setExecutionResult({ error: err.response?.data?.message || 'Execution failed' })
     } finally {
-      setModalLoading(false)
-      setConnecting(null)
+      setExecuting(false)
     }
   }
 
@@ -435,6 +455,22 @@ export default function Tools() {
                 {isConnected ? (
                   <>
                     <Button
+                      variant="primary"
+                      className="flex-1 gap-2 text-xs h-9"
+                      onClick={() => handleOpenTool(tool.key, tool.url)}
+                    >
+                      Open
+                    </Button>
+                    {TOOL_DETAILS[tool.key]?.canExecute && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 gap-2 text-xs h-9"
+                        onClick={() => setExecutionModal(tool.key)}
+                      >
+                        Execute API
+                      </Button>
+                    )}
+                    <Button
                       variant="ghost"
                       className="flex-1 gap-2 text-xs h-9 border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                       onClick={() => handleDisconnect(tool.key)}
@@ -464,10 +500,76 @@ export default function Tools() {
         <CredentialModal
           tool={modalOpen}
           onClose={() => setModalOpen(null)}
-          onSubmit={(credential) => handleConnectSubmit(modalOpen, credential)}
+          onSubmit={(credentials) => handleConnectSubmit(modalOpen, credentials)}
           isLoading={modalLoading}
           error={error}
         />
+      )}
+
+      {/* API Execution Modal */}
+      {executionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-lg max-w-md w-full shadow-2xl">
+            <div className="bg-gradient-to-r from-primary/20 to-primary/10 border-b border-slate-700 px-6 py-4">
+              <h2 className="text-xl font-bold text-white">Execute {TOOL_DETAILS[executionModal]?.name} API</h2>
+              <p className="text-sm text-gray-400 mt-1">Send API request with your stored credentials</p>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Parameters (JSON)</label>
+                <textarea
+                  value={JSON.stringify(executionParams, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      setExecutionParams(JSON.parse(e.target.value))
+                    } catch {
+                      // Invalid JSON, keep as string
+                    }
+                  }}
+                  placeholder='{"prompt": "Hello World"}'
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm placeholder-gray-500 focus:border-primary focus:outline-none transition"
+                  rows={4}
+                />
+              </div>
+              {executionResult && (
+                <div className="bg-slate-800 border border-slate-600 rounded p-3">
+                  <h3 className="text-sm font-medium text-white mb-2">Result:</h3>
+                  <pre className="text-xs text-gray-300 whitespace-pre-wrap">
+                    {JSON.stringify(executionResult, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-700 px-6 py-3 flex gap-3 justify-end bg-slate-800/50">
+              <button
+                onClick={() => {
+                  setExecutionModal(null)
+                  setExecutionResult(null)
+                  setExecutionParams({})
+                }}
+                disabled={executing}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition disabled:opacity-50"
+              >
+                Close
+              </button>
+              <Button
+                variant="primary"
+                onClick={() => handleExecuteAPI(executionModal, executionParams)}
+                disabled={executing}
+                className="flex items-center gap-2"
+              >
+                {executing ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Executing...
+                  </>
+                ) : (
+                  'Execute'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </PageContainer>
   )

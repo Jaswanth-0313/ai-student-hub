@@ -90,7 +90,7 @@ async function connectTool(req, res) {
   try {
     const userId = req.userId || (req.user && req.user.id);
     const toolName = req.params.toolName;
-    const { credential } = req.body; // generic field for apiKey/token/username
+    const { credentials, credential } = req.body; // support both old and new format
 
     // validate tool
     const tool = toolsList.find(t => t.key === toolName);
@@ -114,20 +114,24 @@ async function connectTool(req, res) {
     const toolConfig = toolsWithCredentials[toolName];
     
     // Validate credential requirement
-    if (toolConfig && toolConfig.requiresCredential && (!credential || credential.toString().trim() === '')) {
-      return res.status(400).json({ 
-        message: `${toolName} requires a ${toolConfig.label}. Please provide a valid credential.` 
-      });
+    const credentialData = credentials || (credential ? { apiKey: credential } : {});
+    if (toolConfig && toolConfig.requiresCredential) {
+      const primaryField = toolName === 'chatgpt' ? 'apiKey' : toolName === 'figma' ? 'token' : 'apiKey';
+      if (!credentialData[primaryField] || credentialData[primaryField].toString().trim() === '') {
+        return res.status(400).json({ 
+          message: `${toolName} requires a ${toolConfig.label}. Please provide a valid credential.` 
+        });
+      }
     }
 
     // For tools that require credentials, ensure something is provided
     const validator = require('validator');
-    const credentialToStore = credential ? String(credential).trim() : '';
+    const credentialToStore = JSON.stringify(credentialData); // Store as JSON string
     
     // Don't allow empty credentials for tools that require them
-    if (toolConfig && toolConfig.requiresCredential && credentialToStore === '') {
+    if (toolConfig && toolConfig.requiresCredential && (!credentialData || Object.keys(credentialData).length === 0)) {
       return res.status(400).json({ 
-        message: `${toolName} credential cannot be empty.`
+        message: `${toolName} credentials cannot be empty.`
       });
     }
 
@@ -189,12 +193,101 @@ async function getToolDetails(req, res) {
   }
 }
 
+// Execute API for connected tool
+async function executeToolAPI(req, res) {
+  try {
+    const userId = req.userId || (req.user && req.user.id);
+    const toolName = req.params.toolName;
+    const { params } = req.body;
+
+    // Simple rate limiting (in production, use Redis or similar)
+    const rateLimitKey = `api_${userId}_${toolName}`;
+    const now = Date.now();
+    if (!global.rateLimits) global.rateLimits = {};
+    if (global.rateLimits[rateLimitKey] && now - global.rateLimits[rateLimitKey] < 60000) { // 1 min
+      return res.status(429).json({ message: 'Rate limit exceeded. Please wait before making another request.' });
+    }
+    global.rateLimits[rateLimitKey] = now;
+
+    // Check if tool is connected
+    const connection = await ToolConnection.findOne({ userId, toolName, connected: true });
+    if (!connection) {
+      return res.status(400).json({ message: 'Tool not connected' });
+    }
+
+    // Decrypt credentials
+    const decryptedCredentials = JSON.parse(decrypt(connection.credentials));
+
+    let result;
+    try {
+      switch (toolName) {
+        case 'chatgpt':
+          result = await executeChatGPT(decryptedCredentials, params);
+          break;
+        case 'figma':
+          result = await executeFigma(decryptedCredentials, params);
+          break;
+        default:
+          return res.status(400).json({ message: 'API execution not supported for this tool' });
+      }
+    } catch (apiErr) {
+      console.error(`API execution error for ${toolName}:`, apiErr.message);
+      return res.status(400).json({ message: `API request failed: ${apiErr.message}` });
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('executeToolAPI error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// ChatGPT API execution
+async function executeChatGPT(credentials, params) {
+  const { apiKey, endpoint = 'https://api.openai.com/v1' } = credentials;
+  const response = await fetch(`${endpoint}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: params.prompt || 'Hello' }],
+      max_tokens: 100
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`ChatGPT API error: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+// Figma API execution
+async function executeFigma(credentials, params) {
+  const { token } = credentials;
+  const response = await fetch(`https://api.figma.com/v1/files/${params.fileId || '0'}`, {
+    headers: {
+      'X-Figma-Token': token
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Figma API error: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
 module.exports = {
   getAllTools,
   connectTool,
   disconnectTool,
   getConnectedTools,
-  getToolDetails
+  getToolDetails,
+  executeToolAPI
 };
 
 // --- Dev-C++ compile endpoint (basic sandboxed runner) ---
