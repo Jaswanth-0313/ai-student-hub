@@ -104,6 +104,8 @@ export default function Signup() {
     try {
       setError(null)
       const provider = new GoogleAuthProvider()
+      
+      console.log("🚀 Starting Google signup with popup...");
       const result = await signInWithPopup(auth, provider)
       const firebaseUser = result.user
       firebaseUser.id = firebaseUser.uid
@@ -136,9 +138,18 @@ export default function Signup() {
       await initFirebaseSession(firebaseUser)
       navigate('/dashboard')
     } catch (err) {
-      console.error("Google Signup Error:", err)
-      if (err.code !== 'auth/popup-closed-by-user') {
-        setError(err.message || 'Google Signup failed')
+      console.error("Google Signup Error:", err.code, err.message)
+      
+      // Handle specific error codes
+      if (err.code === 'auth/popup-blocked') {
+        setError('⚠️ Google sign-up popup was blocked. Please allow popups for this site and try again.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        // User closed popup - don't show error
+        return;
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('❌ This domain is not authorized for Google sign-up. Contact support.');
+      } else {
+        setError(err.message || 'Google sign-up failed. Please try again.');
       }
     }
   }

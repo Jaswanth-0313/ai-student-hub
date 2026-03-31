@@ -4,8 +4,7 @@ import { LogIn, Mail, Lock, AlertCircle, Rocket } from 'lucide-react'
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   fetchSignInMethodsForEmail
 } from "firebase/auth";
 import { auth } from '../firebase'
@@ -24,25 +23,6 @@ export default function Login() {
   const navigate = useNavigate()
   const { login, user: authUser } = useContext(AuthContext)
   const { initFirebaseSession } = useSession()
-
-  // Check for Google redirect result on mount
-  useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          console.log('✅ Google login redirect result:', result.user.email);
-          await syncGoogleUser(result.user);
-          navigate('/dashboard');
-        }
-      } catch (err) {
-        console.error('❌ Redirect result error:', err);
-        setError(err.message || 'Google login failed');
-      }
-    };
-    
-    handleRedirectResult();
-  }, []);
 
   // If already logged in, redirect to dashboard
   useEffect(() => {
@@ -171,14 +151,29 @@ export default function Login() {
       setGoogleLoading(true)
       const provider = new GoogleAuthProvider()
 
-      console.log("🚀 Starting Google login with redirect...");
-      // Use redirect only (more reliable than popup)
-      await signInWithRedirect(auth, provider)
-      // User will be redirected to Google, then back to app
-      // getRedirectResult on mount will handle the completion
+      console.log("🚀 Starting Google login with popup...");
+      // Use popup for better user experience
+      const result = await signInWithPopup(auth, provider)
+      const firebaseUser = result.user
+
+      console.log("✅ Google popup successful:", firebaseUser.email);
+      
+      // Sync Google user with backend
+      await syncGoogleUser(firebaseUser)
+      navigate('/dashboard')
     } catch (err) {
-      console.error("❌ Google Login Error:", err)
-      setError(err.message || 'Google Login failed')
+      console.error("❌ Google Login Error:", err.code, err.message)
+      
+      // Handle specific error codes
+      if (err.code === 'auth/popup-blocked') {
+        setError('⚠️ Google sign-in popup was blocked. Please allow popups for this site and try again.')
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError(null) // User closed popup, don't show error
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('❌ This domain is not authorized for Google sign-in. Contact support.')
+      } else {
+        setError(err.message || 'Google login failed. Please try again.')
+      }
       setGoogleLoading(false)
     }
   }
