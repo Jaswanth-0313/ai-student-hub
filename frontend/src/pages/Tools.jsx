@@ -274,6 +274,8 @@ export default function Tools() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [connecting, setConnecting] = useState(null)
+  const [modalOpen, setModalOpen] = useState(null)
+  const [modalLoading, setModalLoading] = useState(false)
   const [executionModal, setExecutionModal] = useState(null)
   const [executionParams, setExecutionParams] = useState({})
   const [executionResult, setExecutionResult] = useState(null)
@@ -367,6 +369,21 @@ export default function Tools() {
     }
   }
 
+  const handleConnectSubmit = async (toolKey, credentials) => {
+    try {
+      setModalLoading(true)
+      setError(null)
+      await api.post(`/tools/connect/${toolKey}`, { credentials })
+      await loadTools()
+      setModalOpen(null) // Close modal on success
+    } catch (err) {
+      console.error('Connection error:', err)
+      setError(err.response?.data?.message || `Failed to connect ${toolKey}`)
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
   if (loading) return (
     <PageContainer>
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -387,6 +404,21 @@ export default function Tools() {
       description: tool.description || details.description || ''
     }
   })
+
+  // Safety check: prevent rendering if tools data is invalid
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return (
+      <PageContainer>
+        <SectionTitle
+          title="Available Tools"
+          subtitle="Connect and manage your tools."
+        />
+        <Card className="text-center py-8">
+          <p className="text-gray-400">Loading tools...</p>
+        </Card>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer>
