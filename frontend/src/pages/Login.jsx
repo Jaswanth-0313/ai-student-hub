@@ -38,12 +38,21 @@ export default function Login() {
       const idToken = await firebaseUser.getIdToken(true);
       setFirebaseIdToken(idToken);
       
+      console.log("🔹 Sending sync request with:", {
+        firebaseUID: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName,
+        provider: 'google.com'
+      });
+
       const syncRes = await authAPI.syncFirebaseUser({
         firebaseUID: firebaseUser.uid,
         email: firebaseUser.email,
         name: firebaseUser.displayName,
         provider: 'google.com'
       });
+
+      console.log("✅ Sync response received:", syncRes.data);
 
       if (syncRes.data.token) {
         setAuthToken(syncRes.data.token);
@@ -58,8 +67,15 @@ export default function Login() {
       await initFirebaseSession(firebaseUser);
       console.log("✅ Google sync successful");
     } catch (syncErr) {
-      console.error("❌ Google sync failed:", syncErr);
-      throw new Error('Failed to sync with backend');
+      console.error("❌ Google sync failed - Details:");
+      console.error("  Error code:", syncErr.code);
+      console.error("  Error message:", syncErr.message);
+      console.error("  Response status:", syncErr.response?.status);
+      console.error("  Response data:", syncErr.response?.data);
+      
+      // Provide helpful error message
+      const errorMsg = syncErr.response?.data?.message || syncErr.message || 'Failed to sync with backend';
+      throw new Error(errorMsg);
     }
   }
 
@@ -104,12 +120,21 @@ export default function Login() {
       // Sync with Backend
       try {
         console.log("🔹 Syncing with backend MongoDB...");
+        console.log("🔹 Sending sync request with:", {
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || '',
+          provider: 'password'
+        });
+
         const syncRes = await authAPI.syncFirebaseUser({
           firebaseUID: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName || '',
           provider: 'password'
         });
+
+        console.log("✅ Sync response received:", syncRes.data);
 
         if (syncRes.data.token) {
           setAuthToken(syncRes.data.token);
@@ -123,7 +148,11 @@ export default function Login() {
 
         console.log("✅ Backend Sync Success");
       } catch (syncErr) {
-        console.error("❌ Backend Sync Failed:", syncErr);
+        console.error("❌ Backend Sync Failed - Details:");
+        console.error("  Error code:", syncErr.code);
+        console.error("  Error message:", syncErr.message);
+        console.error("  Response status:", syncErr.response?.status);
+        console.error("  Response data:", syncErr.response?.data);
       }
 
       console.log("🎉 Login Complete! Navigating...");

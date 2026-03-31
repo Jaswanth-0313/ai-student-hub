@@ -170,30 +170,44 @@ router.post(
 
 // ✅ FIREBASE SYNC (Create/Update user after Firebase Auth)
 router.post("/firebase", async (req, res) => {
-  console.log("🔍 Firebase user received");
+  console.log("🔍 Firebase user received:", { body: req.body });
   try {
     const { firebaseUID, email, name, provider } = req.body;
 
+    // Validate required fields
     if (!firebaseUID || !email) {
-      console.error("❌ Missing required fields: firebaseUID or email");
-      return res.status(400).json({ message: "firebaseUID and email are required" });
+      console.error("❌ Missing required fields:", { firebaseUID: !!firebaseUID, email: !!email });
+      return res.status(400).json({ 
+        message: "firebaseUID and email are required",
+        received: { firebaseUID: !!firebaseUID, email: !!email }
+      });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    console.log("🔹 Normalized email:", normalizedEmail);
 
+    // Validate email format
+    if (!validator.isEmail(normalizedEmail)) {
+      console.error("❌ Invalid email format:", normalizedEmail);
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    console.log("🔹 Looking for existing user...");
     // Upsert user: find by firebaseUID or email
     let user = await User.findOne({
       $or: [{ firebaseUID: firebaseUID }, { email: normalizedEmail }]
     });
 
     if (user) {
-      console.log("🔍 Updating existing user...");
+      console.log("🔍 Updating existing user...", { userId: user._id, email: user.email });
       user.lastLogin = new Date();
       if (!user.firebaseUID) user.firebaseUID = firebaseUID;
       if (name) user.name = name;
       if (provider) user.provider = provider;
+      
+      console.log("🔹 Saving updated user...");
       await user.save();
-      console.log("✅ User saved to MongoDB");
+      console.log("✅ User updated in MongoDB");
     } else {
       console.log("🔍 Creating new user...");
       user = new User({
@@ -203,14 +217,23 @@ router.post("/firebase", async (req, res) => {
         provider: provider || 'firebase',
         lastLogin: new Date()
       });
+      
+      console.log("🔹 Saving new user...");
       await user.save();
-      console.log("✅ User saved to MongoDB");
+      console.log("✅ New user created in MongoDB");
     }
 
     console.log("🎉 USER STORED IN MONGODB SUCCESSFULLY");
 
+    // Validate JWT_SECRET exists
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET not configured");
+      return res.status(500).json({ message: "Server configuration error: JWT_SECRET missing" });
+    }
+
     // Generate backend JWT for session persistence
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    console.log("✅ JWT token generated");
 
     res.status(200).json({
       message: "Firebase sync successful",
@@ -224,8 +247,37 @@ router.post("/firebase", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Firebase Sync Error:", err);
-    res.status(500).json({ message: "Internal server error during sync", error: err.message });
+    console.error("❌ Firebase Sync Error - Full Details:");
+    console.error("  Error Name:", err.name);
+    console.error("  Error Message:", err.message);
+    console.error("  Error Code:", err.code);
+    console.error("  Error Stack:", err.stack);
+    
+    // Return different error codes based on error type
+    if (err.name === 'MongoError' || err.name === 'MongoServerError') {
+      console.error("  📊 MongoDB Error Details:", err.details || err);
+      if (err.code === 11000) {
+        return res.status(409).json({ 
+          message: "User with this email already exists",
+          error: "DUPLICATE_EMAIL"
+        });
+      }
+    }
+    
+    if (err.name === 'ValidationError') {
+      console.error("  Validation Error Details:", Object.keys(err.errors));
+      return res.status(400).json({ 
+        message: "Validation error",
+        error: "VALIDATION_ERROR",
+        details: Object.keys(err.errors).join(', ')
+      });
+    }
+
+    res.status(500).json({ 
+      message: "Internal server error during Firebase sync",
+      error: err.message || "Unknown error",
+      type: err.name
+    });
   }
 });
 

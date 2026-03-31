@@ -115,12 +115,21 @@ export default function Signup() {
       // Sync Google User with Backend
       try {
         console.log("🔹 Syncing Google User with backend... Name:", firebaseUser.displayName);
+        console.log("🔹 Sending sync request with:", {
+          firebaseUID: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          provider: 'google'
+        });
+
         const syncRes = await authAPI.syncFirebaseUser({
           firebaseUID: firebaseUser.uid,
           email: firebaseUser.email,
           name: firebaseUser.displayName,
           provider: 'google'
         });
+
+        console.log("✅ Sync response received:", syncRes.data);
 
         if (syncRes.data.token) {
           setAuthToken(syncRes.data.token);
@@ -132,7 +141,11 @@ export default function Signup() {
           login(syncRes.data.user);
         }
       } catch (syncErr) {
-        console.error("❌ Google Sync Failed:", syncErr);
+        console.error("❌ Google Sync Failed - Details:");
+        console.error("  Error code:", syncErr.code);
+        console.error("  Error message:", syncErr.message);
+        console.error("  Response status:", syncErr.response?.status);
+        console.error("  Response data:", syncErr.response?.data);
       }
 
       await initFirebaseSession(firebaseUser)
