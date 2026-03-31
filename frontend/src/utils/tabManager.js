@@ -38,10 +38,28 @@ export function listOpenToolWindows() {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
+  const closeToolTabs = () => {
     closeAllToolWindows()
-  })
-  window.addEventListener('unload', () => {
-    closeAllToolWindows()
+    try {
+      localStorage.setItem('aiStudentHub_appClosed', Date.now().toString())
+    } catch (e) {
+      // localStorage may be unavailable in private mode, ignore
+    }
+  }
+
+  window.addEventListener('beforeunload', closeToolTabs)
+  window.addEventListener('unload', closeToolTabs)
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'aiStudentHub_appClosed' && event.newValue) {
+      // If main app closed in another tab, close this tool tab as well
+      if (window.opener) {
+        try {
+          window.close()
+        } catch (e) {
+          // Some browsers block window.close; ignore.
+        }
+      }
+    }
   })
 }
