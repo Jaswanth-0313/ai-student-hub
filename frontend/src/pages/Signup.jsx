@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { UserPlus, Mail, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react'
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from "firebase/auth";
 import { auth } from '../firebase'
 import { AuthContext } from '../context/AuthContext'
 import { authAPI, setAuthToken } from '../services/api'
@@ -57,7 +57,11 @@ export default function Signup() {
       const firebaseUser = userCredential.user;
       firebaseUser.id = firebaseUser.uid;
 
-      // 2. Global Auth Context Update
+      console.log("🔹 Sending email verification...");
+      await sendEmailVerification(firebaseUser);
+      console.log("✅ Verification email sent to:", normalizedEmail);
+
+      // 2. Global Auth Context Update (for immediate persistence during sync)
       login(firebaseUser)
 
       // 3. Backend Synchronization (MongoDB)
@@ -86,8 +90,12 @@ export default function Signup() {
         console.error("❌ Backend Sync Failed:", syncErr);
       }
 
-      console.log("🎉 Signup Complete! Navigating...");
-      navigate('/dashboard')
+      // Sign out local Firebase session after triggering verification so user must verify email
+      await signOut(auth)
+      setError(`✅ Verification email sent to ${normalizedEmail}. Confirm email and then log in.`)
+      setLoading(false)
+      navigate('/login')
+      return
     } catch (err) {
       console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
       console.error("❌ SIGNUP ERROR STACK:", err);
@@ -97,73 +105,6 @@ export default function Signup() {
     } finally {
       console.log("🏁 Signup sequence finished (setLoading(false))");
       setLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    try {
-      setError(null)
-      const provider = new GoogleAuthProvider()
-      
-      console.log("🚀 Starting Google signup with popup...");
-      const result = await signInWithPopup(auth, provider)
-      const firebaseUser = result.user
-      firebaseUser.id = firebaseUser.uid
-
-      login(firebaseUser)
-
-      // Sync Google User with Backend
-      try {
-        console.log("🔹 Syncing Google User with backend... Name:", firebaseUser.displayName);
-        console.log("🔹 Sending sync request with:", {
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          provider: 'google'
-        });
-
-        const syncRes = await authAPI.syncFirebaseUser({
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          provider: 'google'
-        });
-
-        console.log("✅ Sync response received:", syncRes.data);
-
-        if (syncRes.data.token) {
-          setAuthToken(syncRes.data.token);
-        }
-
-        if (syncRes.data.user && syncRes.data.token) {
-          login(syncRes.data.token, syncRes.data.user);
-        } else if (syncRes.data.user) {
-          login(syncRes.data.user);
-        }
-      } catch (syncErr) {
-        console.error("❌ Google Sync Failed - Details:");
-        console.error("  Error code:", syncErr.code);
-        console.error("  Error message:", syncErr.message);
-        console.error("  Response status:", syncErr.response?.status);
-        console.error("  Response data:", syncErr.response?.data);
-      }
-
-      await initFirebaseSession(firebaseUser)
-      navigate('/dashboard')
-    } catch (err) {
-      console.error("Google Signup Error:", err.code, err.message)
-      
-      // Handle specific error codes
-      if (err.code === 'auth/popup-blocked') {
-        setError('⚠️ Google sign-up popup was blocked. Please allow popups for this site and try again.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        // User closed popup - don't show error
-        return;
-      } else if (err.code === 'auth/unauthorized-domain') {
-        setError('❌ This domain is not authorized for Google sign-up. Contact support.');
-      } else {
-        setError(err.message || 'Google sign-up failed. Please try again.');
-      }
     }
   }
 
@@ -256,23 +197,6 @@ export default function Signup() {
             </div>
           )}
 
-          <div className="relative py-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/5"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-surface px-4 text-gray-500 font-bold">Or</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold"
-          >
-            <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" className="h-5 w-5" alt="Google" />
-            Continue with Google
-          </button>
         </form>
       </Card>
 

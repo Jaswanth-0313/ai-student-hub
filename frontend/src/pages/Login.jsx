@@ -5,7 +5,11 @@ import {
   signInWithEmailAndPassword, 
   GoogleAuthProvider, 
   signInWithPopup,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  sendEmailVerification,
+  signOut
 } from "firebase/auth";
 import { auth } from '../firebase'
 import { AuthContext } from '../context/AuthContext'
@@ -17,6 +21,12 @@ import { Button } from '../components/ui/Button'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [otp, setOtp] = useState('')
+  const [verificationId, setVerificationId] = useState(null)
+  const [isPhoneMode, setIsPhoneMode] = useState(false)
+  const [isSendingCode, setIsSendingCode] = useState(false)
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -30,6 +40,67 @@ export default function Login() {
       navigate('/dashboard')
     }
   }, [authUser, navigate])
+
+  const setupRecaptcha = () => {
+    if (typeof window === 'undefined') return null;
+
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        'recaptcha-container',
+        {
+          size: 'invisible',
+          callback: (response) => {
+            console.log('✅ reCAPTCHA solved', response);
+          },
+          'expired-callback': () => {
+            console.warn('⚠️ reCAPTCHA expired, please try again');
+          },
+        },
+        auth
+      );
+    }
+
+    return window.recaptchaVerifier;
+  };
+
+  const syncFirebaseUser = async (firebaseUser, providerType = 'password') => {
+    try {
+      console.log("🔹 Syncing Firebase User with backend...");
+      const idToken = await firebaseUser.getIdToken(true);
+      setFirebaseIdToken(idToken);
+
+      const payload = {
+        firebaseUID: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        name: firebaseUser.displayName || firebaseUser.phoneNumber || 'Student',
+        provider: providerType
+      };
+
+      if (providerType === 'phone') {
+        delete payload.email;
+        payload.phoneNumber = firebaseUser.phoneNumber;
+      }
+
+      const syncRes = await authAPI.syncFirebaseUser(payload);
+
+      if (syncRes.data.token) {
+        setAuthToken(syncRes.data.token);
+      }
+
+      if (syncRes.data.user && syncRes.data.token) {
+        login(syncRes.data.token, syncRes.data.user);
+      } else if (syncRes.data.user) {
+        login(syncRes.data.user);
+      }
+
+      await initFirebaseSession(firebaseUser);
+      console.log("✅ Backend sync successful");
+    } catch (syncErr) {
+      console.error("❌ Firebase sync failed:", syncErr);
+      const errorMsg = syncErr.response?.data?.message || syncErr.message || 'Failed to sync with backend';
+      throw new Error(errorMsg);
+    }
+  };
 
   const syncGoogleUser = async (firebaseUser) => {
     try {
@@ -110,6 +181,14 @@ export default function Login() {
       const firebaseUser = userCredential.user;
       firebaseUser.id = firebaseUser.uid;
 
+      if (!firebaseUser.emailVerified) {
+        await sendEmailVerification(firebaseUser);
+        setError('✉️ Email not verified. Verification email sent. Please verify before signing in.');
+        setLoading(false);
+        await signOut(auth);
+        return;
+      }
+
       // Get Firebase ID token for API calls
       const idToken = await firebaseUser.getIdToken(true);
       setFirebaseIdToken(idToken);
@@ -117,46 +196,15 @@ export default function Login() {
       // Set initial Firebase user
       login(firebaseUser)
 
-      // Sync with Backend
+      // Sync with backend using shared function
       try {
-        console.log("🔹 Syncing with backend MongoDB...");
-        console.log("🔹 Sending sync request with:", {
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName || '',
-          provider: 'password'
-        });
-
-        const syncRes = await authAPI.syncFirebaseUser({
-          firebaseUID: firebaseUser.uid,
-          email: firebaseUser.email,
-          name: firebaseUser.displayName || '',
-          provider: 'password'
-        });
-
-        console.log("✅ Sync response received:", syncRes.data);
-
-        if (syncRes.data.token) {
-          setAuthToken(syncRes.data.token);
-        }
-
-        if (syncRes.data.user && syncRes.data.token) {
-          login(syncRes.data.token, syncRes.data.user);
-        } else if (syncRes.data.user) {
-          login(syncRes.data.user);
-        }
-
-        console.log("✅ Backend Sync Success");
+        await syncFirebaseUser(firebaseUser, 'password');
+        console.log("🎉 Login Complete! Navigating...");
+        navigate('/dashboard');
       } catch (syncErr) {
-        console.error("❌ Backend Sync Failed - Details:");
-        console.error("  Error code:", syncErr.code);
-        console.error("  Error message:", syncErr.message);
-        console.error("  Response status:", syncErr.response?.status);
-        console.error("  Response data:", syncErr.response?.data);
+        console.error("❌ Backend sync failed during login:", syncErr);
+        setError(syncErr.message || 'Failed to sync user.');
       }
-
-      console.log("🎉 Login Complete! Navigating...");
-      navigate('/dashboard')
     } catch (err) {
       console.error("❌ FULL FIREBASE ERROR:", err.code, err.message);
 
@@ -207,6 +255,57 @@ export default function Login() {
     }
   }
 
+  const handleSendOtp = async () => {
+    setError(null)
+    setIsSendingCode(true)
+
+    const rawPhone = String(phoneNumber || '').trim()
+    if (!rawPhone) {
+      setError('Phone number is required')
+      setIsSendingCode(false)
+      return
+    }
+
+    const normalizedPhone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone.replace(/[^\d]/g, '')}`
+
+    try {
+      const verifier = setupRecaptcha()
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, verifier)
+      setVerificationId(confirmation)
+      setError(`OTP sent to ${normalizedPhone}.`)
+    } catch (err) {
+      console.error('❌ Phone OTP send error:', err)
+      setError(err.message || 'Failed to send OTP. Please try again.')
+    } finally {
+      setIsSendingCode(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    setError(null)
+    setIsVerifyingCode(true)
+
+    if (!verificationId) {
+      setError('No OTP request found. Please request a code first.')
+      setIsVerifyingCode(false)
+      return
+    }
+
+    try {
+      const result = await verificationId.confirm(otp)
+      const firebaseUser = result.user
+      firebaseUser.id = firebaseUser.uid
+
+      await syncFirebaseUser(firebaseUser, 'phone')
+      navigate('/dashboard')
+    } catch (err) {
+      console.error('❌ OTP verification error:', err)
+      setError(err.message || 'Invalid or expired OTP.')
+    } finally {
+      setIsVerifyingCode(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background Glow */}
@@ -225,45 +324,108 @@ export default function Login() {
       </div>
 
       <Card className="w-full max-w-md p-8 shadow-2xl border-white/10 animate-slide-up delay-100">
-        <form onSubmit={submit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
-                <Mail size={16} />
-              </div>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="yours@example.com"
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
-              />
-            </div>
-          </div>
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className={`py-2 px-3 rounded-lg border ${isPhoneMode ? 'border-white/20 bg-transparent text-white/70' : 'border-primary bg-primary/20 text-white'}`}
+            onClick={() => setIsPhoneMode(false)}
+          >Email login</button>
+          <button
+            type="button"
+            className={`py-2 px-3 rounded-lg border ${isPhoneMode ? 'border-primary bg-primary/20 text-white' : 'border-white/20 bg-transparent text-white/70'}`}
+            onClick={() => setIsPhoneMode(true)}
+          >Phone login</button>
+        </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Password</label>
-              <Link to="/forgot-password" className="text-xs text-primary hover:underline font-semibold">
-                Forgot?
-              </Link>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
-                <Lock size={16} />
+        <form onSubmit={submit} className="space-y-6">
+          {isPhoneMode ? (
+            <> 
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Phone Number</label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    placeholder="+1234567890"
+                    className="w-full pl-4 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+                  />
+                </div>
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
-              />
-            </div>
-          </div>
+
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={isSendingCode}
+                className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingCode ? 'Sending OTP...' : 'Send OTP'}
+              </button>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">OTP Code</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value)}
+                    placeholder="Enter OTP"
+                    className="w-full pl-4 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleVerifyOtp}
+                disabled={isVerifyingCode}
+                className="w-full py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isVerifyingCode ? 'Verifying...' : 'Verify OTP and Sign In'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                    <Mail size={16} />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    placeholder="yours@example.com"
+                    className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-xs font-bold uppercase tracking-widest text-gray-500">Password</label>
+                  <Link to="/forgot-password" className="text-xs text-primary hover:underline font-semibold">
+                    Forgot?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500">
+                    <Lock size={16} />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-white placeholder-gray-600 transition-all text-sm"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <Button
             type="submit"
@@ -310,6 +472,8 @@ export default function Login() {
           </button>
         </form>
       </Card>
+
+      <div id="recaptcha-container" className="invisible h-0 w-0" />
 
       <div className="mt-8 text-center animate-slide-up delay-200">
         <p className="text-gray-400 text-sm">

@@ -46,7 +46,7 @@ export default function ForgotPassword() {
       // Send Firebase password reset email
       console.log('🔹 Sending Firebase password reset email to:', normalizedEmail)
       await sendPasswordResetEmail(auth, normalizedEmail, {
-        url: window.location.origin + '/login',
+        url: "https://ai-student-hub.web.app/login",
         handleCodeInApp: true
       })
 
