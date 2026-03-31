@@ -206,16 +206,13 @@ function CredentialModal({ tool, onClose, onSubmit, isLoading, error }) {
               </label>
               <input
                 type={toolDetails.credentialType === 'apiKey' ? 'password' : 'text'}
-                value={credentials.apiKey || credential}
-                onChange={(e) => {
-                  setCredential(e.target.value)
-                  setCredentialError('')
-                }}
+                value={credentials.apiKey || ''}
+                onChange={(e) => handleFieldChange('apiKey', e.target.value)}
                 placeholder={`Enter your ${toolDetails.credentialLabel.toLowerCase()}`}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm placeholder-gray-500 focus:border-primary focus:outline-none transition"
               />
-              {credentialError && (
-                <p className="text-red-400 text-xs mt-1">{credentialError}</p>
+              {credentialErrors.apiKey && (
+                <p className="text-red-400 text-xs mt-1">{credentialErrors.apiKey}</p>
               )}
               <p className="text-xs text-gray-400 mt-2">
                 � Your credentials are encrypted and stored securely. We never share them with anyone.
@@ -307,6 +304,7 @@ export default function Tools() {
 
   const loadTools = async () => {
     try {
+      setError(null)
       const res = await api.get('/tools')
       const payload = res.data
       const list = Array.isArray(payload) ? payload : payload?.tools || []
@@ -358,9 +356,11 @@ export default function Tools() {
   const handleExecuteAPI = async (toolKey, params) => {
     try {
       setExecuting(true)
+      setExecutionResult(null)
       const res = await api.post(`/tools/execute/${toolKey}`, { params })
       setExecutionResult(res.data)
     } catch (err) {
+      console.error('API execution error:', err)
       setExecutionResult({ error: err.response?.data?.message || 'Execution failed' })
     } finally {
       setExecuting(false)
@@ -387,10 +387,6 @@ export default function Tools() {
       description: tool.description || details.description || ''
     }
   })
-
-  useEffect(() => {
-    loadTools()
-  }, [])
 
   return (
     <PageContainer>
