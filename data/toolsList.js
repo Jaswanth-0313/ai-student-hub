@@ -81,6 +81,16 @@ module.exports = [
     howTo: 'Use your Google API token or OAuth to connect Notebook LM.'
   },
   {
+    name: 'Notion',
+    key: 'notion',
+    logo: 'https://cdn.simpleicons.org/notion',
+    description: 'Notion workspace integration for notes',
+    website: 'https://www.notion.so',
+    features: ['Database sync', 'Documentation', 'Notes'],
+    useCases: ['Organize assignments', 'Track projects'],
+    howTo: 'Use Notion integration token and connect it via Student Hub.'
+  },
+  {
     name: 'DevC++ v5.11',
     key: 'devcpp',
     logo: 'https://cdn-icons-png.flaticon.com/512/6132/6132222.png',

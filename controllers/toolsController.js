@@ -105,6 +105,7 @@ async function connectTool(req, res) {
       canva: { requiresCredential: true, label: 'Token' },
       github: { requiresCredential: true, label: 'Token' },
       leetcode: { requiresCredential: true, label: 'Username' },
+      notion: { requiresCredential: true, label: 'API Key' },
       notebooklm: { requiresCredential: false, label: null },
       devcpp: { requiresCredential: false, label: null },
       gmail: { requiresCredential: false, label: null }

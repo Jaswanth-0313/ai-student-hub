@@ -93,6 +93,15 @@ const TOOL_DETAILS = {
     credentialType: 'none',
     credentialLabel: 'No API key required'
   },
+  notion: {
+    name: 'Notion',
+    url: 'https://www.notion.so',
+    logo: 'https://cdn.simpleicons.org/notion',
+    description: 'Notion workspace integration for notes and docs',
+    apiKeyUrl: 'https://developers.notion.com/',
+    credentialType: 'apiKey',
+    credentialLabel: 'Notion Integration Token'
+  },
   gmail: {
     name: 'Gmail',
     url: 'https://mail.google.com',
@@ -407,15 +416,24 @@ export default function Tools() {
               </div>
 
               <div className="px-4 pb-4 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  className="flex-1 gap-2 text-xs h-9"
+                  onClick={() => handleOpenTool(tool.key, tool.url)}
+                >
+                  Open Website
+                </Button>
+                {tool.apiKeyUrl && tool.apiKeyUrl !== tool.url && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2 text-xs h-9"
+                    onClick={() => window.open(tool.apiKeyUrl, '_blank')}
+                  >
+                    Get API Key
+                  </Button>
+                )}
                 {isConnected ? (
                   <>
-                    <Button
-                      variant="primary"
-                      className="flex-1 gap-2 text-xs h-9"
-                      onClick={() => handleOpenTool(tool.key, tool.url)}
-                    >
-                      Open
-                    </Button>
                     <Button
                       variant="ghost"
                       className="flex-1 gap-2 text-xs h-9 border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300"

@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true, lowercase: true },
   password: { type: String },
-  provider: { type: String, enum: ['local', 'google', 'firebase'], default: 'local' },
+  provider: { type: String, enum: ['google', 'password', 'local', 'firebase'], required: true, default: 'local' },
   googleId: { type: String },
   // ✅ Gmail OAuth tokens
   googleAccessToken: { type: String },
