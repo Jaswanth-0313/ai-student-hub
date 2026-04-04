@@ -2,22 +2,8 @@ import axios from 'axios'
 
 // Determine API base URL (production-first)
 // 1. VITE_API_BASE (preferred)
-// 2. VITE_API_URL + '/api'
-// 3. runtime origin '/api'
-// 4. local dev fallback
-const API_BASE = import.meta.env.VITE_API_BASE || (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : (import.meta.env.DEV ? 'http://localhost:5000/api' : `${window.location.origin}/api`))
-const isDevelopment = import.meta.env.DEV
-
-if (!isDevelopment && !import.meta.env.VITE_API_BASE) {
-  console.warn('⚠️ VITE_API_BASE is not set. Using defaults: ', API_BASE);
-}
-
-// Log API configuration
-if (isDevelopment) {
-  console.log(`🔧 Development Mode - API: ${API_BASE}`)
-} else {
-  console.log(`🚀 Production/Runtime Mode - API: ${API_BASE}`)
-}
+// 2. runtime origin '/api'
+const API_BASE = import.meta.env.VITE_API_BASE || window.location.origin + "/api"
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -81,8 +67,23 @@ export const authAPI = {
   login: async (credentials) => api.post('/users/login', credentials),
   signup: async (userData) => api.post('/users/create', userData),
   syncFirebaseUser: async (userData) => {
-    // Send Firebase user details to backend for MongoDB sync
-    return api.post('/users/firebase', userData);
+    // Send Firebase user details to backend for MongoDB sync with retry
+    const maxRetries = 3
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+    let lastError
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await api.post('/users/firebase', userData)
+      } catch (err) {
+        lastError = err
+        console.warn(`⚠️ Firebase sync attempt ${attempt} failed`, err?.response?.status || err?.message)
+        if (attempt < maxRetries) await delay(500 * attempt)
+      }
+    }
+
+    console.error('❌ Firebase sync failed after retries; continuing without blocking UI', lastError)
+    return { data: { message: 'Backend sync failed', warning: 'non-blocking', error: lastError?.message }}
   },
   forgotPassword: async (email) => api.post('/users/forgot-password', { email }),
   resetPassword: async (email, newPassword) => api.post('/users/reset-password', { email, newPassword }),

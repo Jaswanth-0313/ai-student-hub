@@ -92,6 +92,53 @@ const TOOLS = [
   }
 ]
 
+const EXTERNAL_TOOLS = [
+  {
+    name: 'ChatGPT',
+    description: 'OpenAI assistant for content, code, and study help.',
+    url: 'https://chat.openai.com',
+    icon: '🤖',
+    gradient: 'from-[#10a37f]/20 to-[#10a37f]/5'
+  },
+  {
+    name: 'LinkedIn',
+    description: 'Professional networking and career growth platform.',
+    url: 'https://www.linkedin.com',
+    icon: '🔗',
+    gradient: 'from-[#0a66c2]/20 to-[#0a66c2]/5'
+  },
+  {
+    name: 'GET Multi',
+    description: 'Multi-step task and workflow automation for students.',
+    url: 'https://getmulti.com',
+    icon: '🧠',
+    gradient: 'from-[#ff9900]/20 to-[#ff9900]/5'
+  },
+  {
+    name: 'Emergent',
+    description: 'Discover emerging AI tools and product updates.',
+    url: 'https://emergent.com',
+    icon: '✨',
+    gradient: 'from-[#8b5cf6]/20 to-[#8b5cf6]/5'
+  }
+]
+
+const IMPORTANT_USERS = [
+  {
+    name: 'LinkedIn',
+    description: 'Professional networking for students and career growth.',
+    url: 'https://www.linkedin.com',
+    icon: '🔗'
+  }
+]
+
+const USER_INFO = [
+  {
+    title: 'Profile Overview',
+    content: 'Your dashboard profile data and preferences will appear here once you sign in.'
+  }
+]
+
 export default function Resources() {
   return (
     <PageContainer>
@@ -141,6 +188,73 @@ export default function Resources() {
             </div>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-12">
+        <SectionTitle
+          title="External Tools"
+          subtitle="Quick access to extra study and productivity resources."
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+          {EXTERNAL_TOOLS.map((tool) => (
+            <Card key={tool.name} className={`bg-gradient-to-br ${tool.gradient} border-white/5 hover:border-white/20 transition-all duration-300`}>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-3xl">{tool.icon}</div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">External</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-2">{tool.name}</h2>
+                  <p className="text-sm text-gray-300 leading-relaxed">{tool.description}</p>
+                </div>
+                <Button
+                  variant="primary"
+                  className="w-full gap-2 text-xs h-11 bg-white/10 border-white/10 text-white hover:bg-white/20"
+                  onClick={() => openToolWindow(tool.name, tool.url)}
+                >
+                  <Globe size={14} /> Open
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6 border-white/10">
+            <h3 className="text-lg font-bold text-white mb-3">Important Users</h3>
+            <p className="text-sm text-gray-400 mb-4">Useful platforms for students, professionals, and networking.</p>
+            <div className="space-y-3">
+              {IMPORTANT_USERS.map((user) => (
+                <a
+                  key={user.name}
+                  href={user.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-4 rounded-2xl border border-white/10 bg-slate-900/50 hover:border-white/20 transition"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xl">{user.icon}</span>
+                    <span className="font-semibold text-white">{user.name}</span>
+                  </div>
+                  <p className="text-sm text-gray-400">{user.description}</p>
+                </a>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="p-6 border-white/10">
+            <h3 className="text-lg font-bold text-white mb-3">User Info</h3>
+            <p className="text-sm text-gray-400 mb-4">Profile info and personal details will appear here when you sign in.</p>
+            <div className="space-y-4">
+              {USER_INFO.map((item) => (
+                <div key={item.title} className="rounded-2xl bg-slate-900/60 p-4 border border-white/10">
+                  <h4 className="text-sm font-semibold text-white mb-2">{item.title}</h4>
+                  <p className="text-sm text-gray-400">{item.content}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Guides & Tips */}

@@ -2,9 +2,11 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, unique: true, required: true, lowercase: true },
+  email: { type: String, unique: true, sparse: true, lowercase: true },
+  phoneNumber: { type: String, unique: true, sparse: true },
   password: { type: String },
-  provider: { type: String, enum: ['google', 'password', 'local', 'firebase'], required: true, default: 'local' },
+  // provider supports email/password and Google used by Firebase sync; other values allowed for safe backward compatibility
+  provider: { type: String, required: true, default: 'local' },
   googleId: { type: String },
   // ✅ Gmail OAuth tokens
   googleAccessToken: { type: String },
