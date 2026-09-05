@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Blocks, Code, Link as LinkIcon, Settings, Sparkles, TrendingUp } from 'lucide-react'
+import { Activity, Blocks, BookOpen, Code, Link as LinkIcon, Settings, Sparkles, TrendingUp } from 'lucide-react'
 import api, { setAuthToken } from '../services/api'
 import { AuthContext } from '../context/AuthContext'
 import { openToolWindow } from '../utils/tabManager'
@@ -146,6 +146,17 @@ export default function Dashboard() {
           <section>
             <SectionTitle title="Quick Actions" subtitle="Jump right back into your workflow" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link to="/study-assistant" className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-2xl">
+                <Card className="h-full hover:bg-white/[0.02] border-primary/30 hover:border-primary/60 flex items-center p-5 gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                    <BookOpen size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">AI Study Assistant</h3>
+                    <p className="text-sm text-gray-400 mt-1">Summarize, practice, understand, plan</p>
+                  </div>
+                </Card>
+              </Link>
               <Link to="/tools" className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-2xl">
                 <Card className="h-full hover:bg-white/[0.02] border-primary/30 hover:border-primary/60 flex items-center p-5 gap-4">
                   <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">

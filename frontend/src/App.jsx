@@ -13,6 +13,7 @@ import DevCPP from './pages/DevCPP'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import Gmail from './pages/Gmail'
+import StudyAssistant from './pages/StudyAssistant'
 import ProtectedRoute from './components/ProtectedRoute'
 import Navbar from './components/Navbar'
 
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/register" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute><Navbar /><Dashboard /></ProtectedRoute>} />
+        <Route path="/study-assistant" element={<ProtectedRoute><Navbar /><StudyAssistant /></ProtectedRoute>} />
         <Route path="/tools" element={<ProtectedRoute><Navbar /><Tools /></ProtectedRoute>} />
         <Route path="/resources" element={<ProtectedRoute><Navbar /><Resources /></ProtectedRoute>} />
         <Route path="/info" element={<ProtectedRoute><Navbar /><Info /></ProtectedRoute>} />

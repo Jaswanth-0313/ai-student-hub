@@ -14,6 +14,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Study Assistant', path: '/study-assistant' },
     { name: 'Tools', path: '/tools' },
     { name: 'Resources', path: '/resources' },
     { name: 'Info', path: '/info' },
