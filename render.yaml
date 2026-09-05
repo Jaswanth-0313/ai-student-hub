@@ -11,5 +11,6 @@ services:
       - key: NODE_ENV
         value: production
     # Set these in the Render dashboard (never commit secrets):
-    # MONGO_URI, JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+    # MONGO_URI, JWT_SECRET, STUDY_AI_API_KEY, STUDY_AI_MODEL, STUDY_AI_BASE_URL,
+    # GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
     # GOOGLE_CALLBACK_URL, FRONTEND_URL, CORS_ORIGIN

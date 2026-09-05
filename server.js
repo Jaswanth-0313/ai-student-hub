@@ -21,6 +21,7 @@ const supportRoutes = require("./routes/supportRoutes");
 const authRoutes = require("./routes/authRoutes");
 const gmailRoutes = require("./routes/gmailRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const studyRoutes = require("./routes/studyRoutes");
 
 // Models
 const User = require("./models/User");
@@ -107,6 +108,7 @@ app.use("/api/support", supportRoutes);
 app.use("/auth", authRoutes);
 app.use("/api/gmail", gmailRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/study", studyRoutes);
 
 // ================= API DOCS =================
 app.get('/api/docs', (req, res) => {

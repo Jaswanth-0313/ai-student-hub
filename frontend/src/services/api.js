@@ -120,4 +120,13 @@ export const devcppAPI = {
   compile: (payload) => api.post('/tools/devcpp/compile', payload)
 }
 
+export const studyAPI = {
+  extract: (payload) => api.post('/study/extract', payload),
+  summarize: (payload) => api.post('/study/summarize', payload),
+  questions: (payload) => api.post('/study/questions', payload),
+  explain: (payload) => api.post('/study/explain', payload),
+  plan: (payload) => api.post('/study/plan', payload),
+  evaluateQuiz: (payload) => api.post('/study/quiz/evaluate', payload)
+}
+
 export default api
