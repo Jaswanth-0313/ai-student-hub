@@ -27,7 +27,7 @@ function decrypt(data) {
 
 // Get all tools merged with connection status for current user
 const jwt = require('jsonwebtoken');
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -293,25 +293,67 @@ module.exports = {
 // --- Dev-C++ compile endpoint (basic sandboxed runner) ---
 // Note: This is a simple implementation using local compiler (g++/gcc).
 // For production, run inside containers with strict resource limits.
+function resolveCompilerExecutable(filename) {
+  const compilerName = filename.endsWith('.c') ? 'gcc' : 'g++';
+  const candidateNames = process.platform === 'win32'
+    ? [`${compilerName}.exe`, compilerName]
+    : [compilerName];
+
+  const extraPaths = [];
+  if (process.env.PATH) {
+    extraPaths.push(...process.env.PATH.split(path.delimiter).filter(Boolean));
+  }
+
+  if (process.platform === 'win32') {
+    extraPaths.push(
+      'C:\\msys64\\mingw64\\bin',
+      'C:\\msys64\\usr\\bin',
+      'C:\\mingw64\\bin',
+      'C:\\MinGW\\bin'
+    );
+  }
+
+  for (const dir of extraPaths) {
+    for (const candidate of candidateNames) {
+      const resolved = path.join(dir, candidate);
+      if (fs.existsSync(resolved)) return resolved;
+    }
+  }
+
+  if (process.platform === 'win32') {
+    const explicitPaths = [
+      'C:\\msys64\\mingw64\\bin\\g++.exe',
+      'C:\\msys64\\mingw64\\bin\\gcc.exe',
+      'C:\\mingw64\\bin\\g++.exe',
+      'C:\\MinGW\\bin\\g++.exe'
+    ];
+    for (const p of explicitPaths) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+
+  return compilerName;
+}
+
 async function compileDevCPP(req, res) {
   try {
     const userId = req.userId;
     const { source, filename = 'main.cpp', compileArgs = '' } = req.body;
     if (!source) return res.status(400).json({ message: 'Source code required' });
 
-    // create temp directory
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'devcpp-'));
     const filePath = path.join(tmpDir, filename);
     fs.writeFileSync(filePath, source);
 
     const exePath = path.join(tmpDir, 'a.out');
-
-    // If configured to use Docker runner, run inside container
     const useDocker = String(process.env.USE_DOCKER_RUNNER || 'false').toLowerCase() === 'true';
     const dockerImage = process.env.DOCKER_RUNNER_IMAGE || 'ai-student-hub-devcpp';
 
+    function cleanup() {
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+    }
+
     if (useDocker) {
-      // Ensure tmpDir is accessible to Docker; run container to compile and run
       const dockerCmd = `docker run --rm -v ${tmpDir}:/work ${dockerImage} /work/${path.basename(filePath)} /work/${path.basename(exePath)}`;
       exec(dockerCmd, { timeout: 20000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
         try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
@@ -323,20 +365,32 @@ async function compileDevCPP(req, res) {
       return;
     }
 
-    // choose compiler for local execution
-    const compiler = filename.endsWith('.c') ? 'gcc' : 'g++';
-    const cmd = `${compiler} ${filePath} -o ${exePath} ${compileArgs}`;
+    const compiler = resolveCompilerExecutable(filename);
+    const compilerAvailable = fs.existsSync(compiler) || await new Promise((resolve) => {
+      const testCmd = process.platform === 'win32' ? `where "${compiler}"` : `command -v "${compiler}"`;
+      exec(testCmd, { timeout: 5000 }, (error) => resolve(!error));
+    });
 
-    // compile with timeout
-    exec(cmd, { timeout: 10000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+    if (!compilerAvailable) {
+      cleanup();
+      return res.status(200).json({
+        success: false,
+        compileStdout: '',
+        compileStderr: `${compiler} is not installed on this server. Install a C/C++ compiler or enable USE_DOCKER_RUNNER=true for the containerized runner.`
+      });
+    }
+
+    const extraArgs = String(compileArgs || '')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    execFile(compiler, [...extraArgs, filePath, '-o', exePath], { timeout: 10000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) {
-        // return compile errors
         cleanup();
         return res.status(200).json({ success: false, compileStdout: stdout, compileStderr: stderr || err.message });
       }
 
-      // run the binary with timeout
-      exec(exePath, { timeout: 5000, maxBuffer: 1024 * 1024 }, (runErr, runStdout, runStderr) => {
+      execFile(exePath, [], { timeout: 5000, maxBuffer: 1024 * 1024 }, (runErr, runStdout, runStderr) => {
         cleanup();
         if (runErr) {
           return res.status(200).json({ success: false, runStdout, runStderr: runStderr || runErr.message });
@@ -344,10 +398,6 @@ async function compileDevCPP(req, res) {
         return res.json({ success: true, runStdout, runStderr });
       });
     });
-
-    function cleanup(){
-      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
-    }
   } catch (err) {
     console.error('compileDevCPP error', err);
     return res.status(500).json({ message: err.message });

@@ -66,8 +66,10 @@ function prototypeResponse({ instruction, material = '', responseShape }) {
 async function askStudyAI({ instruction, material = '', responseShape }) {
   const apiKey = process.env.STUDY_AI_API_KEY || process.env.OPENAI_API_KEY;
   const hasUsableKey = apiKey && !String(apiKey).startsWith('REPLACE_');
+  const prototypeMode = String(process.env.STUDY_AI_PROTOTYPE ?? 'true').toLowerCase() === 'true';
+
   if (!hasUsableKey) {
-    if (String(process.env.STUDY_AI_PROTOTYPE).toLowerCase() === 'true') return prototypeResponse({ instruction, material, responseShape });
+    if (prototypeMode) return prototypeResponse({ instruction, material, responseShape });
     throw configurationError();
   }
   const baseUrl = (process.env.STUDY_AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
