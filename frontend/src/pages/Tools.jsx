@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react'
-import { CheckCircle2, Globe, Trash2 } from 'lucide-react'
+import { CheckCircle2, Globe, Search, Trash2 } from 'lucide-react'
 import { getAuth } from 'firebase/auth'
 import api from '../services/api'
 import { AuthContext } from '../context/AuthContext'
@@ -10,6 +10,17 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 
 const TOOL_FALLBACK_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Portrait_Placeholder.png'
+
+const PURPOSES = [
+  { id: 'all', label: 'All purposes' }, { id: 'study', label: 'Study & exams' }, { id: 'code', label: 'Coding' },
+  { id: 'build', label: 'Build an app' }, { id: 'create', label: 'Create content' }, { id: 'present', label: 'Presentations' },
+  { id: 'design', label: 'UI/UX & design' }, { id: 'research', label: 'Research' }, { id: 'career', label: 'Career' }
+]
+
+const TOOL_PURPOSES = {
+  chatgpt: ['study', 'code', 'create', 'research', 'career'], gamma: ['present', 'create'], figma: ['design', 'build'],
+  lovable: ['build'], canva: ['present', 'design', 'create'], github: ['code', 'build'], leetcode: ['study', 'code'], notebooklm: ['study', 'research'], devcpp: ['code', 'study'], notion: ['study', 'create'], gmail: ['career']
+}
 
 const TOOL_DETAILS = {
   chatgpt: {
@@ -280,6 +291,8 @@ export default function Tools() {
   const [executionParams, setExecutionParams] = useState({})
   const [executionResult, setExecutionResult] = useState(null)
   const [executing, setExecuting] = useState(false)
+  const [purpose, setPurpose] = useState('all')
+  const [search, setSearch] = useState('')
   const { token } = useContext(AuthContext)
 
   const handleOpenTool = (toolKey, toolUrl) => {
@@ -404,6 +417,10 @@ export default function Tools() {
       description: tool.description || details.description || ''
     }
   })
+  const visibleTools = enrichedTools.filter(tool => {
+    const query = search.trim().toLowerCase()
+    return (purpose === 'all' || TOOL_PURPOSES[tool.key]?.includes(purpose)) && (!query || `${tool.name} ${tool.description}`.toLowerCase().includes(query))
+  })
 
   // Safety check: prevent rendering if tools data is invalid
   if (!Array.isArray(tools) || tools.length === 0) {
@@ -423,9 +440,15 @@ export default function Tools() {
   return (
     <PageContainer>
       <SectionTitle
-        title="Available Tools"
-        subtitle="Connect and manage your tools."
+        title="Find the right tool"
+        subtitle="Choose what you want to accomplish, then connect the tools that support it."
       />
+
+      <Card className="mb-8 border-primary/20 bg-primary/5">
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white"><Search size={17} className="text-primary" /> What do you want to accomplish?</div>
+        <div className="flex flex-wrap gap-2">{PURPOSES.map(item => <button key={item.id} type="button" onClick={() => setPurpose(item.id)} className={`rounded-full border px-3 py-2 text-xs font-medium transition ${purpose === item.id ? 'border-primary bg-primary text-white' : 'border-white/10 text-gray-400 hover:border-white/30 hover:text-white'}`}>{item.label}</button>)}</div>
+        <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search tools by name or capability" className="mt-4 w-full rounded-xl border border-white/10 bg-surface/60 px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
+      </Card>
 
       {error && (
         <Card className="mb-6 border-red-500/50 bg-red-500/10">
@@ -434,7 +457,7 @@ export default function Tools() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {enrichedTools.map((tool) => {
+        {visibleTools.map((tool) => {
           const isConnected = !!tool.connected
 
           return (

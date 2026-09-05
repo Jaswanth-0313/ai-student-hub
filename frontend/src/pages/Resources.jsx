@@ -1,5 +1,5 @@
-import React from 'react'
-import { ExternalLink, Globe, Layout, LifeBuoy, Settings, Sparkles, Zap } from 'lucide-react'
+import React, { useState } from 'react'
+import { ExternalLink, Globe, Layout, LifeBuoy, Search, Settings, Sparkles, Zap } from 'lucide-react'
 import { openToolWindow } from '../utils/tabManager'
 import { PageContainer } from '../components/ui/PageContainer'
 import { SectionTitle } from '../components/ui/SectionTitle'
@@ -139,13 +139,47 @@ const USER_INFO = [
   }
 ]
 
+const RESOURCE_PURPOSES = [
+  { id: 'all', label: 'All learning' }, { id: 'study', label: 'Study & exams' }, { id: 'code', label: 'Coding' },
+  { id: 'ai', label: 'AI & machine learning' }, { id: 'design', label: 'UI/UX & design' }, { id: 'create', label: 'Content creation' },
+  { id: 'career', label: 'Career' }, { id: 'startup', label: 'Entrepreneurship' }
+]
+
+const CURATED_RESOURCES = [
+  { title: 'Khan Academy', type: 'Study foundations', purpose: 'study', description: 'Practice mathematics, science, and exam fundamentals.', url: 'https://www.khanacademy.org' },
+  { title: 'freeCodeCamp', type: 'Coding practice', purpose: 'code', description: 'Learn web development through guided lessons and projects.', url: 'https://www.freecodecamp.org' },
+  { title: 'Machine Learning Crash Course', type: 'AI course', purpose: 'ai', description: 'A practical introduction to machine learning concepts and exercises.', url: 'https://developers.google.com/machine-learning/crash-course' },
+  { title: 'Figma Learn', type: 'Design tutorials', purpose: 'design', description: 'Learn layouts, prototypes, and interface design systems.', url: 'https://help.figma.com/hc/en-us/categories/360002051613-Learn-design' },
+  { title: 'GitHub Skills', type: 'Project learning', purpose: 'code', description: 'Learn GitHub workflows with interactive exercises.', url: 'https://skills.github.com' },
+  { title: 'Y Combinator Startup School', type: 'Startup guide', purpose: 'startup', description: 'Structured lessons for validating ideas and building startups.', url: 'https://www.startupschool.org' }
+]
+
 export default function Resources() {
+  const [purpose, setPurpose] = useState('all')
+  const [search, setSearch] = useState('')
+  const visibleResources = CURATED_RESOURCES.filter(resource => {
+    const query = search.trim().toLowerCase()
+    return (purpose === 'all' || resource.purpose === purpose) && (!query || `${resource.title} ${resource.type} ${resource.description}`.toLowerCase().includes(query))
+  })
+
   return (
     <PageContainer>
       <SectionTitle
-        title="AI Tools & Resources"
-        subtitle="Direct access to all integrated services and quick-start guides."
+        title="Learn with purpose"
+        subtitle="Choose a goal to find curated learning resources, while keeping the existing guides below."
       />
+
+      <Card className="mb-10 border-secondary/20 bg-secondary/5">
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-white"><Search size={17} className="text-secondary" /> What do you want to learn?</div>
+        <div className="flex flex-wrap gap-2">{RESOURCE_PURPOSES.map(item => <button key={item.id} type="button" onClick={() => setPurpose(item.id)} className={`rounded-full border px-3 py-2 text-xs font-medium transition ${purpose === item.id ? 'border-secondary bg-secondary text-white' : 'border-white/10 text-gray-400 hover:border-white/30 hover:text-white'}`}>{item.label}</button>)}</div>
+        <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search courses, tutorials, and guides" className="mt-4 w-full rounded-xl border border-white/10 bg-surface/60 px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/30" />
+      </Card>
+
+      <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {visibleResources.map(resource => <Card key={resource.title} className="flex flex-col justify-between border-white/10 hover:border-secondary/40"><div><div className="mb-3 flex items-center justify-between"><span className="rounded-full bg-secondary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-secondary">{resource.type}</span><Globe size={16} className="text-gray-500" /></div><h2 className="text-xl font-bold text-white">{resource.title}</h2><p className="mt-2 text-sm leading-6 text-gray-400">{resource.description}</p></div><a href={resource.url} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-secondary hover:underline">Open resource <ExternalLink size={14} /></a></Card>)}
+      </div>
+
+      <SectionTitle title="Existing tool guides" subtitle="Your connected services and setup links remain available here." />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
         {TOOLS.map((tool) => (
